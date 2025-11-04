@@ -2,12 +2,13 @@
 
 import {useEffect, useState} from "react";
 import Link from "next/link";
-import {usePageTitle} from "@/lib";
+import {ApiError, usePageTitle} from "@/lib";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const { setTitle } = usePageTitle();
 
   useEffect(() => {
@@ -21,16 +22,27 @@ export default function ForgotPassword() {
     }
   }, [isSubmitted, setTitle]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    setError("");
+
+    if (!email.trim()) {
+      setError("Please enter your email");
+      return;
+    }
 
     setIsLoading(true);
-    // TODO: Implement password reset request
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      // TODO: Implement password reset request when backend supports it
+      // For now, simulate the flow
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setIsSubmitted(true);
-    }, 1000);
+    } catch (err: unknown) {
+      setError((err as ApiError).message || "Failed to send reset link");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSubmitted) {
@@ -77,6 +89,12 @@ export default function ForgotPassword() {
 
   return (
     <div className="glass p-8 mb-6">
+      {error && (
+        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+          <p className="text-red-300 text-sm">{error}</p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="email" className="block text-white text-sm font-medium mb-2">
