@@ -1,0 +1,128 @@
+'use client';
+
+import {useEffect, useState} from "react";
+import Link from "next/link";
+import {usePageTitle} from "@/lib";
+
+const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { setTitle } = usePageTitle();
+
+  useEffect(() => {
+    setTitle("Login to CardHive", "Welcome back!");
+  }, [setTitle]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !password) {
+      setError("Please enter email and password");
+      return;
+    }
+
+    setIsLoading(true);
+    // TODO: Implement authentication
+    setTimeout(() => setIsLoading(false), 1000);
+  };
+
+  return (
+    <div className="glass p-8">
+      {error && (
+        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+          <p className="text-red-300 text-sm">{error}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Email Input */}
+        <div>
+          <label htmlFor="email" className="block text-white text-sm font-medium mb-2">
+            Email Address
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full bg-black/30 border border-white/20 rounded-full px-5 py-3 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10] transition-colors duration-200"
+          />
+        </div>
+
+        {/* Password Input */}
+        <div>
+          <label htmlFor="password" className="block text-white text-sm font-medium mb-2">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full bg-black/30 border border-white/20 rounded-full px-5 py-3 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10] transition-colors duration-200 pr-12"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/90 transition-colors"
+            >
+              {showPassword ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-4.803m5.596-3.856a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z"
+                  />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Sign In Button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] disabled:opacity-50 text-black font-bold py-4 px-6 rounded-full transition-colors duration-200 mt-6"
+        >
+          {isLoading ? "SIGNING IN..." : "SIGN IN"}
+        </button>
+      </form>
+
+      {/* Forgot Password Link */}
+      <div className="text-center mt-6">
+        <Link
+          href="/forgot-password"
+          className="text-white/70 hover:text-[#CEFE10] text-sm transition-colors duration-200 underline"
+        >
+          Forgot password?
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export default Login;
