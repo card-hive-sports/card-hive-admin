@@ -11,6 +11,11 @@ const recentTransactions = [
   { id: 5, user: "Charlie Wilson", card: "Tim Duncan", amount: "$95", status: "Failed" },
 ];
 
+const formatCurrency = (value: number | string) => {
+  const numberValue = typeof value === "string" ? parseFloat(value.replace(/[^0-9.-]+/g, "")) : value;
+  return numberValue.toLocaleString("en-US", { style: "currency", currency: "USD" });
+};
+
 const Home = () => {
   const revenueData = [
     { label: "January", value: 24000 },
@@ -18,7 +23,7 @@ const Home = () => {
     { label: "March", value: 28000 },
     { label: "April", value: 35000 },
     { label: "May", value: 42000 },
-    { label: "June", value: 38000 },
+    // { label: "June", value: 38000 },
   ];
 
   const userActivityData = [
@@ -51,36 +56,37 @@ const Home = () => {
         <MetricCard icon={TrendingUp} label="Growth Rate" value="23.5%" change="2.4%" positive={false} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1.5fr] gap-6">
+        <div className="flex flex-col h-full">
           <SimpleLineChart data={userActivityData} title="User Activity" />
         </div>
-        <div>
+        <div className="flex flex-col h-full">
           <SimplePieChart data={cardRarityData} title="Card Distribution" />
         </div>
       </div>
 
-      <SimpleBarChart data={revenueData} title="Revenue Trend" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SimpleBarChart data={revenueData} title="Revenue Trend" />
 
-      <div className="glass p-6 rounded-2xl overflow-hidden">
-        <h3 className="text-white text-lg font-semibold mb-4">Recent Transactions</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-            <tr className="border-b border-white/10">
-              <th className="text-left px-4 py-3 text-white/70 font-semibold text-sm">User</th>
-              <th className="text-left px-4 py-3 text-white/70 font-semibold text-sm">Card</th>
-              <th className="text-left px-4 py-3 text-white/70 font-semibold text-sm">Amount</th>
-              <th className="text-left px-4 py-3 text-white/70 font-semibold text-sm">Status</th>
-            </tr>
-            </thead>
-            <tbody>
-            {recentTransactions.map((tx) => (
-              <tr key={tx.id} className="border-b border-white/5 hover:bg-white/5 transition-colors duration-200">
-                <td className="px-4 py-3 text-white text-sm">{tx.user}</td>
-                <td className="px-4 py-3 text-white/70 text-sm">{tx.card}</td>
-                <td className="px-4 py-3 text-white text-sm font-semibold">{tx.amount}</td>
-                <td className="px-4 py-3 text-sm">
+        <div className="glass p-6 rounded-2xl overflow-hidden">
+          <h3 className="text-white text-lg font-semibold mb-4">Recent Transactions</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+              <tr className="border-b border-white/10">
+                <th className="text-left px-0 sm:px-4 py-3 text-white/70 font-semibold text-sm">User</th>
+                <th className="text-left px-0 sm:px-4 py-3 text-white/70 font-semibold text-sm">Card</th>
+                <th className="text-left px-0 sm:px-4 py-3 text-white/70 font-semibold text-sm">Amount</th>
+                <th className="text-left px-4 py-3 text-white/70 font-semibold text-sm hidden xl:block">Status</th>
+              </tr>
+              </thead>
+              <tbody>
+              {recentTransactions.map((tx) => (
+                <tr key={tx.id} className="border-b border-white/5 hover:bg-white/5 transition-colors duration-200">
+                  <td className="px-0 sm:px-4 py-3 text-white text-sm">{tx.user}</td>
+                  <td className="px-0 sm:px-4 py-3 text-white/70 text-sm">{tx.card}</td>
+                  <td className="px-0 sm:px-4 py-3 text-white text-sm font-semibold">{formatCurrency(tx.amount)}</td>
+                  <td className="px-4 py-3 text-sm hidden xl:block">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           tx.status === "Completed"
@@ -92,11 +98,12 @@ const Home = () => {
                       >
                         {tx.status}
                       </span>
-                </td>
-              </tr>
-            ))}
-            </tbody>
-          </table>
+                  </td>
+                </tr>
+              ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

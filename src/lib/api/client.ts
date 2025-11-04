@@ -1,7 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { useAuth } from '@/lib';
+import { authStore } from '@/lib';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -9,24 +9,22 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
     'X-Client-Type': 'web',
   },
-  withCredentials: true, // Important: sends httpOnly cookies
+  withCredentials: true,
 });
 
-// Request interceptor - attach access token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const { accessToken: token } = useAuth();
-    
+    const token = authStore.getState().accessToken;
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error: AxiosError) => Promise.reject(error)
 );
 
-// Response interceptor - handle token refresh
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
@@ -44,10 +42,8 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // If 401 and haven't retried yet, attempt refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // Wait for the refresh to complete
         return new Promise((resolve) => {
           subscribeTokenRefresh((token: string) => {
             if (originalRequest.headers) {
@@ -65,32 +61,33 @@ apiClient.interceptors.response.use(
         const response = await axios.post(
           `${API_BASE_URL}/auth/refresh`,
           {},
-          { withCredentials: true }
+          {
+            headers: {
+              'x-client-type': 'web',
+            },
+            withCredentials: true
+          }
         );
 
         const { accessToken } = response.data;
-        const { setAccessToken } = useAuth();
+        authStore.getState().setAccessToken(accessToken);
 
-        setAccessToken(accessToken);
-        
         isRefreshing = false;
         onRefreshed(accessToken);
 
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         }
-        
+
         return apiClient(originalRequest);
       } catch (refreshError) {
-        const { clearAuth } = useAuth();
         isRefreshing = false;
-        clearAuth();
-        
-        // Redirect to login
+        authStore.getState().clearAuth();
+
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
-        
+
         return Promise.reject(refreshError);
       }
     }

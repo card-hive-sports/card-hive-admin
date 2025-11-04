@@ -4,6 +4,7 @@ import {useEffect, useState} from "react";
 import Link from "next/link";
 import {ApiError, authAPI, useAuth, usePageTitle} from "@/lib";
 import {AxiosError} from "axios";
+import {useRouter} from "next/navigation";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -13,6 +14,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const { setTitle } = usePageTitle();
   const { setAuth } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     setTitle("Login to CardHive", "Welcome back!");
@@ -34,7 +36,7 @@ const Login = () => {
 
       setAuth(response.accessToken, response.user);
 
-      window.location.href = '/home';
+      router.push('/home');
     } catch (err: unknown) {
       const error = err as AxiosError<ApiError>;
       setError(error.response?.data?.message || "Invalid email or password");
@@ -119,7 +121,7 @@ const Login = () => {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] disabled:opacity-50 text-black font-bold py-4 px-6 rounded-full transition-colors duration-200 mt-6"
+          className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] disabled:opacity-50 text-black font-bold py-4 px-6 rounded-full transition-colors duration-200 mt-6 cursor-pointer"
         >
           {isLoading ? "SIGNING IN..." : "SIGN IN"}
         </button>

@@ -183,3 +183,7 @@ code {
     border: 1px solid rgb(255 255 255 / 0.1);
     border-radius: 1rem;
 }
+
+.glass-dark-thick {
+    background-color: rgb(0 0 0 / 0.8)
+}

@@ -36,27 +36,29 @@ export const SimplePieChart: FC<SimplePieChartProps> = ({ data, title }) => {
   });
 
   return (
-    <div className="glass p-6 rounded-2xl">
+    <div className="glass p-6 rounded-2xl h-full flex flex-col">
       <h3 className="text-white text-lg font-semibold mb-6">{title}</h3>
-      <div className="flex gap-8 items-center">
-        <svg className="w-32 h-32 flex-shrink-0" viewBox="0 0 100 100">
-          {slices.map((slice, i) => (
-            <path key={i} d={slice.path} fill={slice.color} />
-          ))}
-        </svg>
-        <div className="space-y-3 flex-1">
-          {data.map((item, i) => (
-            <div key={i}>
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-white/70 text-sm">{item.label}</span>
+      <div className="flex flex-col gap-8 items-center h-full justify-center">
+        <div className={"flex flex-col sm:flex-row gap-8 items-center"}>
+          <svg className="w-56 h-56 flex-shrink-0" viewBox="0 0 100 100">
+            {slices.map((slice, i) => (
+              <path key={i} d={slice.path} fill={slice.color} />
+            ))}
+          </svg>
+          <div className="space-y-3 flex-1 flex flex-row sm:flex-col gap-8 sm:gap-0">
+            {data.map((item, i) => (
+              <div key={i}>
+                <div className="flex flex-col items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-white/70 text-sm">{item.label}</span>
+                  </div>
+                  <span className="text-white font-semibold text-sm">{slices[i].percentage}%</span>
                 </div>
-                <span className="text-white font-semibold text-sm">{slices[i].percentage}%</span>
+                <p className="text-white/50 text-xs">{item.value.toLocaleString()} items</p>
               </div>
-              <p className="text-white/50 text-xs">{item.value.toLocaleString()} items</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>

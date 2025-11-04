@@ -13,7 +13,7 @@ interface AuthStore {
   clearAuth: () => void;
 }
 
-const authStore = create<AuthStore>((set) => ({
+export const authStore = create<AuthStore>((set) => ({
   accessToken: null,
   user: null,
   isAuthenticated: false,
@@ -36,10 +36,11 @@ export const useAuth = () => {
   const user = authStore((s) => s.user);
   const isAuthenticated = authStore((s) => s.isAuthenticated);
   const setAuth = authStore((s) => s.setAuth);
+  const setAccessToken = authStore((s) => s.setAccessToken);
   const clearAuth = authStore((s) => s.clearAuth);
 
   return React.useMemo(
-    () => ({ accessToken, user, isAuthenticated, setAuth, clearAuth }),
-    [accessToken, user, isAuthenticated, setAuth, clearAuth]
+    () => ({ accessToken, user, isAuthenticated, setAuth, setAccessToken, clearAuth }),
+    [accessToken, user, isAuthenticated, setAuth, setAccessToken, clearAuth]
   );
 };
