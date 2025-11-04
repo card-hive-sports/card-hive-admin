@@ -2,7 +2,8 @@
 
 import {useEffect, useState} from "react";
 import Link from "next/link";
-import {ApiError, usePageTitle} from "@/lib";
+import {ApiError, authAPI, usePageTitle} from "@/lib";
+import {AxiosError} from "axios";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -34,12 +35,11 @@ export default function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      // TODO: Implement password reset request when backend supports it
-      // For now, simulate the flow
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await authAPI.forgotPassword({ email });
       setIsSubmitted(true);
     } catch (err: unknown) {
-      setError((err as ApiError).message || "Failed to send reset link");
+      const error = err as AxiosError<ApiError>;
+      setError(error.response?.data?.message || "Failed to send reset link");
     } finally {
       setIsLoading(false);
     }

@@ -2,7 +2,8 @@
 
 import {useEffect, useState} from "react";
 import Link from "next/link";
-import {usePageTitle} from "@/lib";
+import {ApiError, authAPI, useAuth, usePageTitle} from "@/lib";
+import {AxiosError} from "axios";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -11,12 +12,13 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const { setTitle } = usePageTitle();
+  const { setAuth } = useAuth();
 
   useEffect(() => {
     setTitle("Login to CardHive", "Welcome back!");
   }, [setTitle]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -26,8 +28,19 @@ const Login = () => {
     }
 
     setIsLoading(true);
-    // TODO: Implement authentication
-    setTimeout(() => setIsLoading(false), 1000);
+
+    try {
+      const response = await authAPI.emailLogin({ email, password });
+
+      setAuth(response.accessToken, response.user);
+
+      window.location.href = '/home';
+    } catch (err: unknown) {
+      const error = err as AxiosError<ApiError>;
+      setError(error.response?.data?.message || "Invalid email or password");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

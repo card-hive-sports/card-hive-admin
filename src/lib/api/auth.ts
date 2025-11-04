@@ -1,47 +1,22 @@
-import { apiClient } from '@/lib';
-
-export interface RegisterData {
-  fullName: string;
-  email: string;
-  phone: string;
-  dateOfBirth: string;
-}
-
-export interface PhoneLoginRequestData {
-  phone: string;
-}
-
-export interface PhoneLoginVerifyData {
-  phone: string;
-  code: string;
-  sessionID?: string;
-}
-
-export interface GoogleLoginData {
-  idToken: string;
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken?: string;
-  user: {
-    id: string;
-    fullName: string;
-    email: string;
-    phone: string | null;
-    role: string;
-    kycStatus: string;
-    createdAt: string;
-  };
-}
-
-export interface VerificationResponse {
-  message: string;
-  sessionID?: string;
-}
+import {apiClient, AuthResponse, EmailLoginData, ForgotPasswordData, ResetPasswordData, User} from '@/lib';
 
 export const authAPI = {
-  getProfile: async () => {
+  emailLogin: async (data: EmailLoginData): Promise<AuthResponse> => {
+    const response = await apiClient.post('/auth/login/email', data);
+    return response.data;
+  },
+
+  forgotPassword: async (data: ForgotPasswordData): Promise<{ message: string }> => {
+    const response = await apiClient.post('/auth/forgot-password', data);
+    return response.data;
+  },
+
+  resetPassword: async (data: ResetPasswordData): Promise<{ message: string }> => {
+    const response = await apiClient.post('/auth/reset-password', data);
+    return response.data;
+  },
+
+  getProfile: async (): Promise<User> => {
     const response = await apiClient.get('/auth/me');
     return response.data;
   },

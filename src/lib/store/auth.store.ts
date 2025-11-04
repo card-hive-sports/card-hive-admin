@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import {User} from "@/lib";
+import React from "react";
 
 interface AuthStore {
   accessToken: string | null;
@@ -12,7 +13,7 @@ interface AuthStore {
   clearAuth: () => void;
 }
 
-export const authStore = create<AuthStore>((set) => ({
+const authStore = create<AuthStore>((set) => ({
   accessToken: null,
   user: null,
   isAuthenticated: false,
@@ -30,12 +31,15 @@ export const authStore = create<AuthStore>((set) => ({
     set({ accessToken: null, user: null, isAuthenticated: false }),
 }));
 
-export const useAuth = () => authStore((state) => ({
-  accessToken: state.accessToken,
-  user: state.user,
-  isAuthenticated: state.isAuthenticated,
-  setAccessToken: state.setAccessToken,
-  setUser: state.setUser,
-  setAuth: state.setAuth,
-  clearAuth: state.clearAuth,
-}));
+export const useAuth = () => {
+  const accessToken = authStore((s) => s.accessToken);
+  const user = authStore((s) => s.user);
+  const isAuthenticated = authStore((s) => s.isAuthenticated);
+  const setAuth = authStore((s) => s.setAuth);
+  const clearAuth = authStore((s) => s.clearAuth);
+
+  return React.useMemo(
+    () => ({ accessToken, user, isAuthenticated, setAuth, clearAuth }),
+    [accessToken, user, isAuthenticated, setAuth, clearAuth]
+  );
+};

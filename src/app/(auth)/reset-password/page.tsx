@@ -3,7 +3,8 @@
 import {useEffect, useState} from "react";
 import Link from "next/link";
 import {useSearchParams} from "next/navigation";
-import {usePageTitle} from "@/lib";
+import {ApiError, authAPI, usePageTitle} from "@/lib";
+import {AxiosError} from "axios";
 
 export default function ResetPassword() {
   const searchParams = useSearchParams();
@@ -32,7 +33,7 @@ export default function ResetPassword() {
     }
   }, [isSubmitted, setTitle, token]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -51,12 +52,22 @@ export default function ResetPassword() {
       return;
     }
 
+    if (!token) {
+      setError("Invalid reset token");
+      return;
+    }
+
     setIsLoading(true);
-    // TODO: Implement password reset
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      await authAPI.resetPassword({ token, password });
       setIsSubmitted(true);
-    }, 1000);
+    } catch (err: unknown) {
+      const error = err as AxiosError<ApiError>;
+      setError(error.response?.data?.message || "Failed to reset password");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!token) {

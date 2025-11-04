@@ -1,5 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { authStore } from '@/lib/store/auth-store';
+import { useAuth } from '@/lib';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
@@ -15,7 +15,7 @@ export const apiClient = axios.create({
 // Request interceptor - attach access token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = authStore.getState().accessToken;
+    const { accessToken: token } = useAuth();
     
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -69,7 +69,9 @@ apiClient.interceptors.response.use(
         );
 
         const { accessToken } = response.data;
-        authStore.getState().setAccessToken(accessToken);
+        const { setAccessToken } = useAuth();
+
+        setAccessToken(accessToken);
         
         isRefreshing = false;
         onRefreshed(accessToken);
@@ -80,8 +82,9 @@ apiClient.interceptors.response.use(
         
         return apiClient(originalRequest);
       } catch (refreshError) {
+        const { clearAuth } = useAuth();
         isRefreshing = false;
-        authStore.getState().clearAuth();
+        clearAuth();
         
         // Redirect to login
         if (typeof window !== 'undefined') {
