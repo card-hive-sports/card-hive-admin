@@ -1,12 +1,20 @@
 'use client'
 
-import {useEffect, useState} from "react";
+import {useEffect, useState, Suspense} from "react";
 import Link from "next/link";
 import {useSearchParams} from "next/navigation";
 import {ApiError, authAPI, usePageTitle} from "@/lib";
 import {AxiosError} from "axios";
 
 export default function ResetPassword() {
+  return (
+    <Suspense fallback={<div className="text-center text-white">Loading...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
+  );
+}
+
+function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
