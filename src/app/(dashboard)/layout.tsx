@@ -1,14 +1,14 @@
 'use client';
 
-import {FC, useState} from "react";
+import {FC, ReactNode, useState} from "react";
 import Link from "next/link";
-import { Menu, X, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import {Menu, X, LayoutDashboard, LogOut, Settings, Users} from "lucide-react";
 import {usePathname, useRouter} from "next/navigation";
 import {authAPI, useAuth} from "@/lib";
 import Image from "next/image";
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 const Layout: FC<LayoutProps> = ({ children }) => {
@@ -19,7 +19,8 @@ const Layout: FC<LayoutProps> = ({ children }) => {
   const { user } = useAuth();
 
   const menuItems = [
-    { name: "Dashboard", path: "/home", icon: LayoutDashboard },
+    { name: "Home", path: "/home", icon: LayoutDashboard },
+      { name: "Users", path: "/users", icon: Users },
   ];
 
   const isActive = (path: string) => pathname === path;

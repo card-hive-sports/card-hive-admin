@@ -1,9 +1,29 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
-const PROTECTED_ROUTES = ['/home'];
-const VALID_ROUTES = [...AUTH_ROUTES, ...PROTECTED_ROUTES, '/', '/not-found'];
+const AUTH_ROUTES = [
+  '/login',
+  '/forgot-password',
+  '/reset-password'
+];
+const PROTECTED_ROUTES = [
+  '/home',
+  '/users'
+];
+const VALID_ROUTES = [
+  ...AUTH_ROUTES,
+  ...PROTECTED_ROUTES,
+  '/',
+  '/not-found'
+];
+
+const isRouteValid = (pathname: string) => {
+  if (VALID_ROUTES.some(route => pathname === route)) {
+    return true;
+  }
+
+  return VALID_ROUTES.some(route => `/${pathname.split('/')[0]}` === route);
+}
 
 export const proxy = (request: NextRequest) => {
   const { pathname } = request.nextUrl;
@@ -11,7 +31,7 @@ export const proxy = (request: NextRequest) => {
   const refreshToken = request.cookies.get('refreshToken');
   const isAuthenticated = !!refreshToken;
 
-  const isValidRoute = VALID_ROUTES.some(route => pathname === route);
+  const isValidRoute = isRouteValid(pathname);
 
   if (!isValidRoute && pathname !== '/not-found') {
     return NextResponse.redirect(new URL('/not-found', request.url));
