@@ -5,15 +5,13 @@ const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
 const PROTECTED_ROUTES = ['/home'];
 const VALID_ROUTES = [...AUTH_ROUTES, ...PROTECTED_ROUTES, '/', '/not-found'];
 
-export function middleware(request: NextRequest) {
+export const proxy = (request: NextRequest) => {
   const { pathname } = request.nextUrl;
 
   const refreshToken = request.cookies.get('refreshToken');
   const isAuthenticated = !!refreshToken;
 
   const isValidRoute = VALID_ROUTES.some(route => pathname === route);
-
-  console.log("Is valid route ", isValidRoute);
 
   if (!isValidRoute && pathname !== '/not-found') {
     return NextResponse.redirect(new URL('/not-found', request.url));
