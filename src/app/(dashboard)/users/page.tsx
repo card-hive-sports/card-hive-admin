@@ -1,8 +1,24 @@
 'use client'
 
-import {useState, useEffect, useCallback, useRef} from "react";
-import { Search, Plus, Filter, ArrowUpDown, Edit2, Trash2, AlertCircle, Eye } from "lucide-react";
-import {UserFormData, UserModal, GetUsersParams, usersAPI, formatCurrency, useDebouncedValue, User, COMPUTED_STATUS, USERS_SORT_OPTIONS, SORT_ORDER, Pagination} from "@/lib";
+import {useState, useEffect, useCallback} from "react";
+import { Plus, Edit2, Trash2, AlertCircle, Eye } from "lucide-react";
+import {
+  UserFormData,
+  UserModal,
+  GetUsersParams,
+  usersAPI,
+  formatCurrency,
+  useDebouncedValue,
+  User,
+  COMPUTED_STATUS,
+  USERS_SORT_OPTIONS,
+  SORT_ORDER,
+  Pagination,
+  PageHeader,
+  ResourceToolbar,
+  DataTable,
+  DataTableColumn
+} from "@/lib";
 import Link from "next/link";
 
 type ActiveFiltersState = {
@@ -32,8 +48,6 @@ export default function Users() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [showSort, setShowSort] = useState(false);
   const [sortBy, setSortBy] = useState<USERS_SORT_OPTIONS>(USERS_SORT_OPTIONS.CREATED_AT);
   const [sortOrder, setSortOrder] = useState<SORT_ORDER>(SORT_ORDER.ASC);
   const [activeFilters, setActiveFilters] = useState<ActiveFiltersState>(() => initialFiltersState());
@@ -53,8 +67,6 @@ export default function Users() {
     hasNext: false,
     hasPrev: false,
   });
-  const filterRef = useRef<HTMLDivElement>(null);
-  const sortRef = useRef<HTMLDivElement>(null);
   const { status, startDate, endDate } = activeFilters;
   const { page, limit, total, totalPages } = paginationState;
 
@@ -79,44 +91,14 @@ export default function Users() {
     resetToFirstPage();
   };
 
-  const closeFilters = useCallback(() => {
-    setShowFilters(false);
-    setFilterDraft({ ...activeFilters });
-  }, [activeFilters]);
-
-  const closeSort = useCallback(() => {
-    setShowSort(false);
-    setSortDraft({ sortBy, sortOrder });
-  }, [sortBy, sortOrder]);
-
-  const handleFilterToggle = () => {
-    if (showFilters) {
-      closeFilters();
-    } else {
-      setFilterDraft({ ...activeFilters });
-      setShowFilters(true);
-    }
-  };
-
-  const handleSortToggle = () => {
-    if (showSort) {
-      closeSort();
-    } else {
-      setSortDraft({ sortBy, sortOrder });
-      setShowSort(true);
-    }
-  };
-
   const handleApplyFilters = () => {
     setActiveFilters({ ...filterDraft });
-    setShowFilters(false);
     resetToFirstPage();
   };
 
   const handleApplySort = () => {
     setSortBy(sortDraft.sortBy);
     setSortOrder(sortDraft.sortOrder);
-    setShowSort(false);
     resetToFirstPage();
   };
 
@@ -165,25 +147,6 @@ export default function Users() {
   useEffect(() => {
     setSortDraft({ sortBy, sortOrder });
   }, [sortBy, sortOrder]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      const target = event.target as Node;
-      if (showFilters && filterRef.current && !filterRef.current.contains(target)) {
-        closeFilters();
-      }
-      if (showSort && sortRef.current && !sortRef.current.contains(target)) {
-        closeSort();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
-  }, [showFilters, showSort, closeFilters, closeSort]);
 
   const computeStatus = (u: User) => {
     if (u.isDeleted) return "inactive";
@@ -242,6 +205,16 @@ export default function Users() {
     }
   };
 
+  const handleUnarchiveUser = async (user: User) => {
+    try {
+      await usersAPI.unarchiveUser(user.id);
+      await fetchUsers(search);
+      setShowDeleteModal(null);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+    }
+  };
+
   const handleSuspendUser = async (user: User) => {
     try {
       if (user.isActive) {
@@ -255,306 +228,307 @@ export default function Users() {
     }
   };
 
+  const userColumns: DataTableColumn<User>[] = [
+    {
+      id: "name",
+      header: "Name",
+      cell: (user) => <span className="text-white font-semibold">{user.fullName}</span>,
+    },
+    {
+      id: "email",
+      header: "Email",
+      cell: (user) => <span className="text-white/70 text-sm">{user.email ?? "-"}</span>,
+    },
+    {
+      id: "wallet",
+      header: "Wallet",
+      cell: (user) => <span className="text-white font-semibold">{formatCurrency(Number(user.walletBalance))}</span>,
+    },
+    {
+      id: "cards",
+      header: "Cards",
+      cell: (user) => <span className="text-white text-sm">{user.cardsOwned}</span>,
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (user) => {
+        const status = computeStatus(user);
+        return (
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </span>
+        );
+      },
+    },
+    {
+      id: "role",
+      header: "Role",
+      cell: (user) => <span className="text-white/70 text-sm">{user.role}</span>,
+    },
+    {
+      id: "joined",
+      header: "Joined",
+      cell: (user) => (
+        <span className="text-white/70 text-sm">
+          {new Date(user.createdAt).toISOString().split("T")[0]}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      align: "right",
+      cell: (user) => (
+        <div className="flex items-center justify-end gap-2">
+          <Link
+            href={`/users/${user.id}`}
+            className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors"
+            title="View"
+          >
+            <Eye className="w-4 h-4" />
+          </Link>
+          <button
+            onClick={() => {
+              setEditingUser(user);
+              setShowUserModal(true);
+            }}
+            className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+            title="Edit"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleSuspendUser(user)}
+            className="p-2 text-white/70 hover:text-yellow-400 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+            title={user.isActive ? "Suspend" : "Unsuspend"}
+          >
+            <AlertCircle className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setShowDeleteModal(user)}
+            className="p-2 text-white/70 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      ),
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+    },
+  ];
+
+  const renderUserMobileCard = (user: User) => {
+    const status = computeStatus(user);
+    return (
+      <>
+        <div className="mb-4">
+          <h3 className="text-white font-bold text-lg mb-2">{user.fullName}</h3>
+          <p className="text-white/60 text-sm mb-3">{user.email ?? "-"}</p>
+
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div>
+              <p className="text-white/50 text-xs">Wallet</p>
+              <p className="text-white font-semibold">
+                {formatCurrency(Number(user.walletBalance))}
+              </p>
+            </div>
+            <div>
+              <p className="text-white/50 text-xs">Cards</p>
+              <p className="text-white font-semibold">{user.cardsOwned}</p>
+            </div>
+            <div>
+              <p className="text-white/50 text-xs">Status</p>
+              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusColor(status)}`}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Link
+            href={`/users/${user.id}`}
+            className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors text-center"
+          >
+            View
+          </Link>
+          <button
+            onClick={() => {
+              setEditingUser(user);
+              setShowUserModal(true);
+            }}
+            className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => setShowDeleteModal(user)}
+            className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
+          >
+            Delete
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  const renderFilterPanel = (close: () => void) => (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-white/70 text-sm font-medium mb-2">Status</label>
+        <select
+          value={filterDraft.status}
+          onChange={(e) => setFilterDraft((prev) => ({ ...prev, status: e.target.value }))}
+          className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
+        >
+          <option value="">All</option>
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-white/70 text-sm font-medium mb-2">Date range</label>
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            type="date"
+            value={filterDraft.startDate}
+            onChange={(e) => setFilterDraft((prev) => ({ ...prev, startDate: e.target.value }))}
+            className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
+          />
+          <input
+            type="date"
+            value={filterDraft.endDate}
+            onChange={(e) => setFilterDraft((prev) => ({ ...prev, endDate: e.target.value }))}
+            className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
+          />
+        </div>
+        <p className="text-white/40 text-xs mt-2">Filter by created date.</p>
+      </div>
+      <button
+        onClick={() => {
+          handleApplyFilters();
+          close();
+        }}
+        className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
+      >
+        Apply Filters
+      </button>
+    </div>
+  );
+
+  const renderSortPanel = (close: () => void) => (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-white/70 text-sm font-medium mb-2">Sort By</label>
+        <select
+          value={sortDraft.sortBy}
+          onChange={(e) =>
+            setSortDraft((prev) => ({
+              ...prev,
+              sortBy: e.target.value as USERS_SORT_OPTIONS,
+            }))
+          }
+          className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
+        >
+          <option value={USERS_SORT_OPTIONS.CREATED_AT}>Joined Date</option>
+          <option value={USERS_SORT_OPTIONS.FULL_NAME}>Full Name</option>
+          <option value={USERS_SORT_OPTIONS.WALLET_BALANCE}>Wallet Balance</option>
+          <option value={USERS_SORT_OPTIONS.EMAIL}>Email</option>
+          <option value={USERS_SORT_OPTIONS.PHONE}>Phone</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-white/70 text-sm font-medium mb-2">Order</label>
+        <div className="flex gap-2">
+          <button
+            onClick={() =>
+              setSortDraft((prev) => ({
+                ...prev,
+                sortOrder: SORT_ORDER.ASC,
+              }))
+            }
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+              sortDraft.sortOrder === SORT_ORDER.ASC
+                ? "bg-[#CEFE10] text-black"
+                : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
+            }`}
+          >
+            Asc
+          </button>
+          <button
+            onClick={() =>
+              setSortDraft((prev) => ({
+                ...prev,
+                sortOrder: SORT_ORDER.DESC,
+              }))
+            }
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+              sortDraft.sortOrder === SORT_ORDER.DESC
+                ? "bg-[#CEFE10] text-black"
+                : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
+            }`}
+          >
+            Desc
+          </button>
+        </div>
+      </div>
+      <button
+        onClick={() => {
+          handleApplySort();
+          close();
+        }}
+        className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
+      >
+        Apply Sort
+      </button>
+    </div>
+  );
+
   return (
     <>
       <div className="p-4 md:p-8 space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h2 className="text-white text-3xl font-bold mb-2">Users</h2>
-            <p className="text-white/60">Manage platform users and their accounts</p>
-          </div>
-          <button
-            onClick={() => {
-              setEditingUser(null);
-              setShowUserModal(true);
-            }}
-            className="flex items-center gap-2 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
-          >
-            <Plus className="w-5 h-5" />
-            New User
-          </button>
-        </div>
+        <PageHeader
+          title="Users"
+          subtitle="Manage platform users and their accounts"
+          actions={
+            <button
+              onClick={() => {
+                setEditingUser(null);
+                setShowUserModal(true);
+              }}
+              className="flex items-center gap-2 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
+            >
+              <Plus className="w-5 h-5" />
+              New User
+            </button>
+          }
+        />
 
         {/* Search and Controls */}
-        <div className="glass p-4 rounded-2xl space-y-4 relative z-10">
-          <div className="flex flex-col md:flex-row gap-3">
-            {/* Search */}
-            <div className="flex-1 relative cursor-pointer">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-              <input
-                type="text"
-                placeholder="Search users by name, email or phone..."
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full bg-black/30 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
-              />
-            </div>
+        <ResourceToolbar
+          searchValue={search}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="Search users by name, email or phone..."
+          filters={{
+            buttonLabel: "Filters",
+            renderContent: renderFilterPanel,
+          }}
+          sort={{
+            buttonLabel: "Sort",
+            renderContent: renderSortPanel,
+          }}
+        />
 
-            {/* Filter Button */}
-            <div className="relative" ref={filterRef}>
-              <button
-                onClick={handleFilterToggle}
-                className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
-              >
-                <Filter className="w-5 h-5" />
-                Filters
-              </button>
-
-              {showFilters && (
-                <div className="absolute top-full right-0 mt-2 w-72 glass-dark glass-dark-thick rounded-lg p-4 z-50 space-y-4">
-                  <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Status</label>
-                    <select
-                      value={filterDraft.status}
-                      onChange={(e) => setFilterDraft((prev) => ({ ...prev, status: e.target.value }))}
-                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
-                    >
-                      <option value="">All</option>
-                      <option value="active">Active</option>
-                      <option value="suspended">Suspended</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Date range</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="date"
-                        value={filterDraft.startDate}
-                        onChange={(e) => setFilterDraft((prev) => ({ ...prev, startDate: e.target.value }))}
-                        className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
-                      />
-                      <input
-                        type="date"
-                        value={filterDraft.endDate}
-                        onChange={(e) => setFilterDraft((prev) => ({ ...prev, endDate: e.target.value }))}
-                        className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
-                      />
-                    </div>
-                    <p className="text-white/40 text-xs mt-2">Filter by created date.</p>
-                  </div>
-                  <button
-                    onClick={handleApplyFilters}
-                    className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Apply Filters
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Sort Button */}
-            <div className="relative" ref={sortRef}>
-              <button
-                onClick={handleSortToggle}
-                className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
-              >
-                <ArrowUpDown className="w-5 h-5" />
-                Sort
-              </button>
-
-              {showSort && (
-                <div className="absolute top-full right-0 mt-2 w-48 glass-dark glass-dark-thick rounded-lg p-4 z-50 space-y-3">
-                  <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Sort By</label>
-                    <select
-                      value={sortDraft.sortBy}
-                      onChange={(e) => setSortDraft((prev) => ({
-                        ...prev,
-                        sortBy: e.target.value as USERS_SORT_OPTIONS,
-                      }))}
-                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
-                    >
-                      <option value={USERS_SORT_OPTIONS.CREATED_AT}>Joined Date</option>
-                      <option value={USERS_SORT_OPTIONS.FULL_NAME}>Full Name</option>
-                      <option value={USERS_SORT_OPTIONS.WALLET_BALANCE}>Wallet Balance</option>
-                      <option value={USERS_SORT_OPTIONS.EMAIL}>Email</option>
-                      <option value={USERS_SORT_OPTIONS.PHONE}>Phone</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Order</label>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() =>
-                          setSortDraft((prev) => ({
-                            ...prev,
-                            sortOrder: SORT_ORDER.ASC,
-                          }))
-                        }
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
-                          sortDraft.sortOrder === SORT_ORDER.ASC
-                            ? "bg-[#CEFE10] text-black"
-                            : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
-                        }`}
-                      >
-                        Asc
-                      </button>
-                      <button
-                        onClick={() =>
-                          setSortDraft((prev) => ({
-                            ...prev,
-                            sortOrder: SORT_ORDER.DESC,
-                          }))
-                        }
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
-                          sortDraft.sortOrder === SORT_ORDER.DESC
-                            ? "bg-[#CEFE10] text-black"
-                            : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
-                        }`}
-                      >
-                        Desc
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleApplySort}
-                    className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Apply Sort
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Desktop Table View */}
-        <div className="hidden md:block glass rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Name</th>
-                <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Email</th>
-                <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Wallet</th>
-                <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Cards</th>
-                <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Status</th>
-                <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Role</th>
-                <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Joined</th>
-                <th className="text-right px-6 py-4 text-white/70 font-semibold text-sm">Actions</th>
-              </tr>
-              </thead>
-              <tbody>
-              {users.map((user) => {
-                const status = computeStatus(user);
-                return (
-                  <tr key={user.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4 text-white font-semibold">{user.fullName}</td>
-                    <td className="px-6 py-4 text-white/70 text-sm">{user.email ?? "-"}</td>
-                    <td className="px-6 py-4 text-white font-semibold">
-                      {formatCurrency(Number(user.walletBalance))}
-                    </td>
-                    <td className="px-6 py-4 text-white text-sm">{user.cardsOwned}</td>
-                    <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}>
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
-                        </span>
-                    </td>
-                    <td className="px-6 py-4 text-white/70 text-sm">{user.role}</td>
-                    <td className="px-6 py-4 text-white/70 text-sm">{new Date(user.createdAt).toISOString().split('T')[0]}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/users/${user.id}`}
-                          className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors"
-                          title="View"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setEditingUser(user);
-                            setShowUserModal(true);
-                          }}
-                          className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleSuspendUser(user)}
-                          className="p-2 text-white/70 hover:text-yellow-400 hover:bg-white/10 rounded-lg transition-colors"
-                          title={user.isActive ? "Suspend" : "Unsuspend"}
-                        >
-                          <AlertCircle className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setShowDeleteModal(user)}
-                          className="p-2 text-white/70 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-4">
-          {users.map((user) => {
-            const status = computeStatus(user);
-            return (
-              <div key={user.id} className="glass p-4 rounded-2xl">
-                <div className="mb-4">
-                  <h3 className="text-white font-bold text-lg mb-2">{user.fullName}</h3>
-                  <p className="text-white/60 text-sm mb-3">{user.email ?? "-"}</p>
-
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    <div>
-                      <p className="text-white/50 text-xs">Wallet</p>
-                      <p className="text-white font-semibold">
-                        {formatCurrency(Number(user.walletBalance))}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-white/50 text-xs">Cards</p>
-                      <p className="text-white font-semibold">{user.cardsOwned}</p>
-                    </div>
-                    <div>
-                      <p className="text-white/50 text-xs">Status</p>
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusColor(status)}`}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Link
-                    href={`/users/${user.id}`}
-                    className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors text-center"
-                  >
-                    View
-                  </Link>
-                  <button
-                    onClick={() => {
-                      setEditingUser(user);
-                      setShowUserModal(true);
-                    }}
-                    className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteModal(user)}
-                    className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <DataTable<User>
+          data={users}
+          columns={userColumns}
+          keyExtractor={(user) => user.id}
+          renderMobileCard={(user) => renderUserMobileCard(user)}
+        />
 
         <Pagination
           page={page}
@@ -597,13 +571,23 @@ export default function Users() {
               </p>
 
               <div className="space-y-3 mb-6">
-                <button
-                  onClick={() => handleDeleteUser(showDeleteModal, false)}
-                  className="w-full text-left p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/30 transition-colors cursor-pointer"
-                >
-                  <p className="text-yellow-400 font-semibold">Soft Delete (Archive)</p>
-                  <p className="text-yellow-400/70 text-sm">User will be marked as inactive but data remains</p>
-                </button>
+                {!showDeleteModal.isDeleted ? (
+                  <button
+                    onClick={() => handleDeleteUser(showDeleteModal, false)}
+                    className="w-full text-left p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/30 transition-colors cursor-pointer"
+                  >
+                    <p className="text-yellow-400 font-semibold">Soft Delete (Archive)</p>
+                    <p className="text-yellow-400/70 text-sm">User will be marked as inactive but data remains</p>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleUnarchiveUser(showDeleteModal)}
+                    className="w-full text-left p-4 bg-green-500/20 border border-green-500/30 rounded-lg hover:bg-green-500/30 transition-colors cursor-pointer"
+                  >
+                    <p className="text-green-400 font-semibold">Unarchive User</p>
+                    <p className="text-green-400/70 text-sm">Restore access for this archived user</p>
+                  </button>
+                )}
 
                 <button
                   onClick={() => handleDeleteUser(showDeleteModal, true)}

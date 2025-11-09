@@ -31,9 +31,12 @@ export const usersAPI = {
   },
 
   deleteUser: async (userID: string, hard?: boolean): Promise<{ message: string }> => {
-    const response = await apiClient.delete(`/users/${userID}`, {
-      params: { hard: hard ? 'true' : 'false' }
-    });
+    const response = await apiClient.delete(`/users/${userID}/${hard ? 'force' : 'soft'}`);
+    return response.data;
+  },
+
+  unarchiveUser: async (userID: string): Promise<User> => {
+    const response = await apiClient.patch(`/users/${userID}/unarchive`);
     return response.data;
   },
 
