@@ -21,3 +21,8 @@ export const computeUserStatus = (isActive: boolean, isDeleted: boolean): string
   if (!isActive) return "suspended";
   return "active";
 }
+
+export const firstLetterToUpper = (str: string): string => {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}

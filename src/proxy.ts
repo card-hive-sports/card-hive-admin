@@ -8,7 +8,8 @@ const AUTH_ROUTES = [
 ];
 const PROTECTED_ROUTES = [
   '/home',
-  '/users'
+  '/users',
+  '/settings'
 ];
 const VALID_ROUTES = [
   ...AUTH_ROUTES,

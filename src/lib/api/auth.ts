@@ -1,4 +1,4 @@
-import {apiClient, AuthResponse, EmailLoginData, ForgotPasswordData, ResetPasswordData, User} from '@/lib';
+import {apiClient, AuthResponse, EmailLoginData, ForgotPasswordData, ResetPasswordData} from '@/lib';
 
 export const authAPI = {
   emailLogin: async (data: EmailLoginData): Promise<AuthResponse> => {
@@ -16,7 +16,7 @@ export const authAPI = {
     return response.data;
   },
 
-  getProfile: async (): Promise<User> => {
+  getProfile: async (): Promise<AuthResponse['user']> => {
     const response = await apiClient.get('/auth/me');
     return response.data;
   },

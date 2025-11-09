@@ -19,7 +19,8 @@ import {
   User,
   computeUserStatus,
   formatCurrency,
-  usersAPI
+  usersAPI,
+  firstLetterToUpper
 } from "@/lib";
 
 const LOGIN_PAGE_LIMIT = 5;
@@ -270,7 +271,7 @@ const UserDetail = () => {
 
       return {
         id: activity.id,
-        deviceLabel: `${browser} on ${platform} ${deviceType}`,
+        deviceLabel: `${browser} on ${platform} ${firstLetterToUpper(deviceType ?? 'unknown')}`,
         timestamp: formatDateTimeValue(activity.loginAt),
         ipAddress: activity.ipAddress,
         failureReason: activity.failureReason,

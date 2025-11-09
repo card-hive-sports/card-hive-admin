@@ -16,8 +16,6 @@ apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = authStore.getState().accessToken;
 
-    console.log("Auth token: ", token);
-
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -71,8 +69,8 @@ apiClient.interceptors.response.use(
           }
         );
 
-        const { accessToken } = response.data;
-        authStore.getState().setAccessToken(accessToken);
+        const { accessToken, user } = response.data;
+        authStore.getState().setAuth(accessToken, user);
 
         isRefreshing = false;
         onRefreshed(accessToken);
