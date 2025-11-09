@@ -1,6 +1,6 @@
 'use client';
 
-import {FC, ReactNode, useState} from "react";
+import {FC, ReactNode, useEffect, useRef, useState} from "react";
 import Link from "next/link";
 import {Menu, X, LayoutDashboard, LogOut, Settings, Users} from "lucide-react";
 import {usePathname, useRouter} from "next/navigation";
@@ -17,6 +17,7 @@ const Layout: FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const menuItems = [
     { name: "Home", path: "/home", icon: LayoutDashboard },
@@ -31,6 +32,25 @@ const Layout: FC<LayoutProps> = ({ children }) => {
         router.push("/login");
       });
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        profileDropdownOpen &&
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [profileDropdownOpen]);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -77,7 +97,7 @@ const Layout: FC<LayoutProps> = ({ children }) => {
       >
         <button
           onClick={() => setMobileMenuOpen(false)}
-          className="absolute right-4 top-4 p-2 text-white/70 hover:text-white"
+          className="absolute right-4 top-4 p-2 text-white/70 hover:text-white cursor-pointer"
         >
           <X className="w-6 h-6" />
         </button>
@@ -111,15 +131,15 @@ const Layout: FC<LayoutProps> = ({ children }) => {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-white/70 hover:text-white"
+              className="md:hidden p-2 text-white/70 hover:text-white cursor-pointer"
             >
               <Menu className="w-6 h-6" />
             </button>
 
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="w-10 h-10 rounded-full bg-[#CEFE10] text-black font-bold flex items-center justify-center hover:bg-[#b8e80d] transition-colors duration-200"
+                className="w-10 h-10 rounded-full bg-[#CEFE10] text-black font-bold flex items-center justify-center hover:bg-[#b8e80d] transition-colors duration-200 cursor-pointer"
               >
                 {
                   user?.fullName
@@ -133,7 +153,7 @@ const Layout: FC<LayoutProps> = ({ children }) => {
               </button>
 
               {profileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 glass-dark glass-dark-thick rounded-lg shadow-lg overflow-hidden z-50">
+                <div className="absolute right-0 mt-2 w-48 glass-dark rounded-lg shadow-lg overflow-hidden z-50">
                   <Link
                     href="/settings"
                     onClick={() => setProfileDropdownOpen(false)}
@@ -147,7 +167,7 @@ const Layout: FC<LayoutProps> = ({ children }) => {
                       setProfileDropdownOpen(false);
                       handleLogout();
                     }}
-                    className="w-full text-left flex items-center gap-3 px-4 py-3 text-white/90 hover:bg-white/10 transition-colors duration-200 border-t border-white/10"
+                    className="w-full text-left flex items-center gap-3 px-4 py-3 text-white/90 hover:bg-white/10 transition-colors duration-200 border-t border-white/10 cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
                     Logout

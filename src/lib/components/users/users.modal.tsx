@@ -1,12 +1,12 @@
 import {FormEvent, useState} from "react";
 import { X } from "lucide-react";
-import {DashboardUser, UserFormData} from "@/lib";
+import {User, UserFormData} from "@/lib";
 
 interface UserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (userData: UserFormData) => void;
-  initialData?: DashboardUser;
+  initialData?: User;
   title: string;
 }
 
@@ -15,7 +15,8 @@ export const UserModal = ({ isOpen, onClose, onSubmit, initialData, title }: Use
     fullName: initialData?.fullName ?? "",
     email: initialData?.email ?? "",
     phone: initialData?.phone ?? "",
-    wallet: initialData?.wallet ?? "",
+    walletBalance: initialData?.walletBalance ?? "",
+    walletCurrency: initialData?.walletCurrency ?? "",
     status: initialData?.isActive ? "active" : "inactive",
   });
 
@@ -26,7 +27,8 @@ export const UserModal = ({ isOpen, onClose, onSubmit, initialData, title }: Use
       fullName: "",
       email: "",
       phone: "",
-      wallet: "",
+      walletBalance: "",
+      walletCurrency: "",
       status: "active",
     });
     onClose();
@@ -41,7 +43,7 @@ export const UserModal = ({ isOpen, onClose, onSubmit, initialData, title }: Use
         <div className="glass p-6 rounded-2xl">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-white text-xl font-bold">{title}</h2>
-            <button onClick={onClose} className="text-white/70 hover:text-white">
+            <button onClick={onClose} className="text-white/70 hover:text-white cursor-pointer">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -83,11 +85,11 @@ export const UserModal = ({ isOpen, onClose, onSubmit, initialData, title }: Use
             </div>
 
             <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">Wallet Balance</label>
+              <label className="block text-white/70 text-sm font-medium mb-2">WalletBalance Balance</label>
               <input
                 type="text"
-                value={formData.wallet}
-                onChange={(e) => setFormData({ ...formData, wallet: e.target.value })}
+                value={formData.walletBalance}
+                onChange={(e) => setFormData({ ...formData, walletBalance: e.target.value })}
                 className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
                 placeholder="$0.00"
               />
@@ -98,7 +100,7 @@ export const UserModal = ({ isOpen, onClose, onSubmit, initialData, title }: Use
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#CEFE10]"
+                className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#CEFE10] cursor-pointer"
               >
                 <option value="active">Active</option>
                 <option value="suspended">Suspended</option>
@@ -110,13 +112,13 @@ export const UserModal = ({ isOpen, onClose, onSubmit, initialData, title }: Use
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="flex-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="flex-1 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
               >
                 {initialData ? "Update" : "Create"}
               </button>

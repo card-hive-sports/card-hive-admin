@@ -1,111 +1,191 @@
 'use client'
 
-import { useState, useMemo } from "react";
+import {useState, useEffect, useCallback, useRef} from "react";
 import { Search, Plus, Filter, ArrowUpDown, Edit2, Trash2, AlertCircle, Eye } from "lucide-react";
-import { DashboardUser, UserFormData, UserRole, KYCStatus, UserModal } from "@/lib";
+import {UserFormData, UserModal, GetUsersParams, usersAPI, formatCurrency, useDebouncedValue, User, COMPUTED_STATUS, USERS_SORT_OPTIONS, SORT_ORDER, Pagination} from "@/lib";
 import Link from "next/link";
 
-const INITIAL_USERS: DashboardUser[] = [
-  {
-    id: "u_1",
-    fullName: "John Doe",
-    email: "john@example.com",
-    phone: "+1 (555) 123-4567",
-    dateOfBirth: new Date("1990-05-12"),
-    role: UserRole.CUSTOMER,
-    kycStatus: KYCStatus.VERIFIED,
-    isActive: true,
-    isDeleted: false,
-    passwordHash: null,
-    createdAt: new Date("2024-01-15T10:00:00Z"),
-    updatedAt: new Date("2024-01-15T10:00:00Z"),
-    wallet: "$1,250.00",
-    cardsOwned: 42,
-    createdAtStr: "2024-01-15",
-  },
-  {
-    id: "u_2",
-    fullName: "Jane Smith",
-    email: "jane@example.com",
-    phone: "+1 (555) 234-5678",
-    dateOfBirth: new Date("1988-09-03"),
-    role: UserRole.CUSTOMER,
-    kycStatus: KYCStatus.PENDING,
-    isActive: true,
-    isDeleted: false,
-    passwordHash: null,
-    createdAt: new Date("2024-01-20T09:30:00Z"),
-    updatedAt: new Date("2024-01-20T09:30:00Z"),
-    wallet: "$3,800.00",
-    cardsOwned: 156,
-    createdAtStr: "2024-01-20",
-  },
-  {
-    id: "u_3",
-    fullName: "Bob Johnson",
-    email: "bob@example.com",
-    phone: "+1 (555) 345-6789",
-    dateOfBirth: new Date("1995-02-01"),
-    role: UserRole.CUSTOMER,
-    kycStatus: KYCStatus.REJECTED,
-    isActive: false, // suspended-ish
-    isDeleted: false,
-    passwordHash: null,
-    createdAt: new Date("2024-02-01T08:15:00Z"),
-    updatedAt: new Date("2024-02-10T08:15:00Z"),
-    wallet: "$850.00",
-    cardsOwned: 28,
-    createdAtStr: "2024-02-01",
-  },
-  {
-    id: "u_4",
-    fullName: "Alice Brown",
-    email: "alice@example.com",
-    phone: "+1 (555) 456-7890",
-    dateOfBirth: new Date("1992-11-11"),
-    role: UserRole.ADMIN,
-    kycStatus: KYCStatus.VERIFIED,
-    isActive: true,
-    isDeleted: false,
-    passwordHash: null,
-    createdAt: new Date("2024-02-10T11:00:00Z"),
-    updatedAt: new Date("2024-02-12T11:00:00Z"),
-    wallet: "$5,200.00",
-    cardsOwned: 203,
-    createdAtStr: "2024-02-10",
-  },
-  {
-    id: "u_5",
-    fullName: "Charlie Wilson",
-    email: "charlie@example.com",
-    phone: "+1 (555) 567-8901",
-    dateOfBirth: new Date("1985-07-01"),
-    role: UserRole.SUPER_ADMIN,
-    kycStatus: KYCStatus.VERIFIED,
-    isActive: true,
-    isDeleted: false,
-    passwordHash: null,
-    createdAt: new Date("2024-03-01T12:00:00Z"),
-    updatedAt: new Date("2024-03-01T12:00:00Z"),
-    wallet: "$2,150.00",
-    cardsOwned: 87,
-    createdAtStr: "2024-03-01",
-  },
-];
+type ActiveFiltersState = {
+  status: string;
+  startDate: string;
+  endDate: string;
+};
+
+type PaginationState = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
+
+const initialFiltersState = (): ActiveFiltersState => ({
+  status: "",
+  startDate: "",
+  endDate: "",
+});
 
 export default function Users() {
-  const [users, setUsers] = useState<DashboardUser[]>(INITIAL_USERS);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 400);
   const [showUserModal, setShowUserModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<DashboardUser | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState<DashboardUser | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
-  const [sortBy, setSortBy] = useState<"fullName" | "createdAt" | "wallet">("fullName");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({ status: "" });
+  const [sortBy, setSortBy] = useState<USERS_SORT_OPTIONS>(USERS_SORT_OPTIONS.CREATED_AT);
+  const [sortOrder, setSortOrder] = useState<SORT_ORDER>(SORT_ORDER.ASC);
+  const [activeFilters, setActiveFilters] = useState<ActiveFiltersState>(() => initialFiltersState());
+  const [filterDraft, setFilterDraft] = useState<ActiveFiltersState>(() => initialFiltersState());
+  const [sortDraft, setSortDraft] = useState<{ sortBy: USERS_SORT_OPTIONS; sortOrder: SORT_ORDER }>({
+    sortBy: USERS_SORT_OPTIONS.CREATED_AT,
+    sortOrder: SORT_ORDER.ASC,
+  });
 
-  const computeStatus = (u: DashboardUser) => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [paginationState, setPaginationState] = useState<PaginationState>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  });
+  const filterRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
+  const { status, startDate, endDate } = activeFilters;
+  const { page, limit, total, totalPages } = paginationState;
+
+  const resetToFirstPage = useCallback(() => {
+    setPaginationState((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  }, []);
+
+  const handlePageChange = useCallback((nextPage: number) => {
+    setPaginationState((prev) => {
+      if (nextPage < 1 || nextPage > prev.totalPages || nextPage === prev.page) {
+        return prev;
+      }
+      return {
+        ...prev,
+        page: nextPage,
+      };
+    });
+  }, []);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    resetToFirstPage();
+  };
+
+  const closeFilters = useCallback(() => {
+    setShowFilters(false);
+    setFilterDraft({ ...activeFilters });
+  }, [activeFilters]);
+
+  const closeSort = useCallback(() => {
+    setShowSort(false);
+    setSortDraft({ sortBy, sortOrder });
+  }, [sortBy, sortOrder]);
+
+  const handleFilterToggle = () => {
+    if (showFilters) {
+      closeFilters();
+    } else {
+      setFilterDraft({ ...activeFilters });
+      setShowFilters(true);
+    }
+  };
+
+  const handleSortToggle = () => {
+    if (showSort) {
+      closeSort();
+    } else {
+      setSortDraft({ sortBy, sortOrder });
+      setShowSort(true);
+    }
+  };
+
+  const handleApplyFilters = () => {
+    setActiveFilters({ ...filterDraft });
+    setShowFilters(false);
+    resetToFirstPage();
+  };
+
+  const handleApplySort = () => {
+    setSortBy(sortDraft.sortBy);
+    setSortOrder(sortDraft.sortOrder);
+    setShowSort(false);
+    resetToFirstPage();
+  };
+
+  const fetchUsers = useCallback(async (searchTerm?: string) => {
+    setIsLoading(true);
+    try {
+      const normalizedSearch = searchTerm?.trim();
+      const params: GetUsersParams = {
+        search: normalizedSearch ? normalizedSearch : undefined,
+        ...(status && COMPUTED_STATUS[status as COMPUTED_STATUS]),
+        sortBy,
+        sortOrder,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        page,
+        limit,
+      };
+
+      const response = await usersAPI.getUsers(params);
+
+      setUsers(response.data);
+      setPaginationState((prev) => ({
+        ...prev,
+        page: response.pagination.page,
+        limit: response.pagination.limit,
+        total: response.pagination.total,
+        totalPages: response.pagination.totalPages,
+        hasNext: response.pagination.hasNext,
+        hasPrev: response.pagination.hasPrev,
+      }));
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [status, startDate, endDate, sortBy, sortOrder, page, limit]);
+
+  useEffect(() => {
+    fetchUsers(debouncedSearch);
+  }, [debouncedSearch, fetchUsers]);
+
+  useEffect(() => {
+    setFilterDraft(activeFilters);
+  }, [activeFilters]);
+
+  useEffect(() => {
+    setSortDraft({ sortBy, sortOrder });
+  }, [sortBy, sortOrder]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (showFilters && filterRef.current && !filterRef.current.contains(target)) {
+        closeFilters();
+      }
+      if (showSort && sortRef.current && !sortRef.current.contains(target)) {
+        closeSort();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showFilters, showSort, closeFilters, closeSort]);
+
+  const computeStatus = (u: User) => {
     if (u.isDeleted) return "inactive";
     if (!u.isActive) return "suspended";
     return "active";
@@ -117,118 +197,62 @@ export default function Users() {
     return "bg-gray-500/20 text-gray-400";
   };
 
-  const parseWalletToNumber = (wallet: string) => {
-    // "$1,250.00" -> 1250
-    return Number(wallet.replace(/[^0-9.-]+/g, ""));
+  const handleCreateUser = async (formData: UserFormData) => {
+    try {
+      await usersAPI.createUser({
+        fullName: formData.fullName,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        walletBalance: Number(formData.walletBalance),
+        walletCurrency: formData.walletCurrency,
+      });
+      await fetchUsers(search);
+      setShowUserModal(false);
+    } catch (error) {
+      console.error('Failed to create user:', error);
+    }
   };
 
-  const filteredAndSortedUsers = useMemo(() => {
-    let result = [...users];
-
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter((user) =>
-        (user.fullName || "").toLowerCase().includes(q) ||
-        (user.email || "").toLowerCase().includes(q) ||
-        (user.phone || "").toLowerCase().includes(q)
-      );
-    }
-
-    // filter by status (active | suspended | inactive)
-    const statusFilter = activeFilters.status || "";
-    if (statusFilter) {
-      result = result.filter((u) => computeStatus(u) === statusFilter);
-    }
-
-    result.sort((a, b) => {
-      if (sortBy === "fullName") {
-        const aVal = (a.fullName || "").toLowerCase();
-        const bVal = (b.fullName || "").toLowerCase();
-        if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
-        if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
-        return 0;
-      }
-
-      if (sortBy === "createdAt") {
-        const aTime = new Date(a.createdAt).getTime();
-        const bTime = new Date(b.createdAt).getTime();
-        if (aTime < bTime) return sortOrder === "asc" ? -1 : 1;
-        if (aTime > bTime) return sortOrder === "asc" ? 1 : -1;
-        return 0;
-      }
-
-      // wallet
-      const aNum = parseWalletToNumber(a.wallet || "");
-      const bNum = parseWalletToNumber(b.wallet || "");
-      if (aNum < bNum) return sortOrder === "asc" ? -1 : 1;
-      if (aNum > bNum) return sortOrder === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [users, search, activeFilters, sortBy, sortOrder]);
-
-  const handleCreateUser = (formData: UserFormData) => {
-    // UserFormData from your lib currently has { name, email, phone, wallet, status }
-    // map name -> fullName; map status -> isActive/isDeleted semantics
-    const newUser: DashboardUser = {
-      id: `u_${Math.max(...users.map((u) => Number(u.id.split('_')[1] || 0)), 0) + 1}`,
-      fullName: formData.fullName ?? "Unnamed",
-      email: formData.email ?? null,
-      phone: formData.phone ?? null,
-      dateOfBirth: new Date(), // placeholder
-      role: UserRole.CUSTOMER,
-      kycStatus: KYCStatus.PENDING,
-      isActive: formData.status !== "inactive",
-      isDeleted: formData.status === "inactive",
-      passwordHash: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      wallet: formData.wallet ?? "$0.00",
-      cardsOwned: 0,
-      createdAtStr: new Date().toISOString().split("T")[0],
-    };
-    setUsers((prev) => [...prev, newUser]);
-    setShowUserModal(false);
-  };
-
-  const handleEditUser = (formData: UserFormData) => {
+  const handleEditUser = async (formData: UserFormData) => {
     if (!editingUser) return;
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === editingUser.id
-          ? {
-            ...u,
-            fullName: formData.fullName ?? u.fullName,
-            email: formData.email ?? u.email,
-            phone: formData.phone ?? u.phone,
-            wallet: formData.wallet ?? u.wallet,
-            isActive: formData.status !== "inactive",
-            isDeleted: formData.status === "inactive",
-            updatedAt: new Date(),
-          }
-          : u
-      )
-    );
-    setEditingUser(null);
-    setShowUserModal(false);
-  };
-
-  const handleDeleteUser = (user: DashboardUser, isPurge: boolean) => {
-    if (isPurge) {
-      setUsers(users.filter((u) => u.id !== user.id));
-    } else {
-      setUsers(users.map((u) => (u.id === user.id ? { ...u, isDeleted: true, isActive: false } : u)));
+    try {
+      await usersAPI.updateUser(editingUser.id, {
+        fullName: formData.fullName,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        isActive: formData.status !== 'inactive',
+        walletBalance: Number(formData.walletBalance),
+        walletCurrency: formData.walletCurrency,
+      });
+      await fetchUsers(search);
+      setEditingUser(null);
+      setShowUserModal(false);
+    } catch (error) {
+      console.error('Failed to update user:', error);
     }
-    setShowDeleteModal(null);
   };
 
-  const handleSuspendUser = (user: DashboardUser) => {
-    setUsers(
-      users.map((u) =>
-        u.id === user.id ? { ...u, isActive: user.isActive ? false : true, updatedAt: new Date() } : u
-      )
-    );
+  const handleDeleteUser = async (user: User, isPurge: boolean) => {
+    try {
+      await usersAPI.deleteUser(user.id, isPurge);
+      await fetchUsers(search);
+      setShowDeleteModal(null);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+    }
+  };
+
+  const handleSuspendUser = async (user: User) => {
+    try {
+      if (user.isActive) {
+        await usersAPI.suspendUser(user.id);
+      } else {
+        await usersAPI.unsuspendUser(user.id);
+      }
+      await fetchUsers(search);
+    } catch (error) {
+      console.error('Failed to suspend/unsuspend user:', error);
+    }
   };
 
   return (
@@ -245,7 +269,7 @@ export default function Users() {
               setEditingUser(null);
               setShowUserModal(true);
             }}
-            className="flex items-center gap-2 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center"
+            className="flex items-center gap-2 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
           >
             <Plus className="w-5 h-5" />
             New User
@@ -253,38 +277,38 @@ export default function Users() {
         </div>
 
         {/* Search and Controls */}
-        <div className="glass p-4 rounded-2xl space-y-4 relative z-0">
+        <div className="glass p-4 rounded-2xl space-y-4 relative z-10">
           <div className="flex flex-col md:flex-row gap-3">
             {/* Search */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative cursor-pointer">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
               <input
                 type="text"
                 placeholder="Search users by name, email or phone..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full bg-black/30 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
               />
             </div>
 
             {/* Filter Button */}
-            <div className="relative">
+            <div className="relative" ref={filterRef}>
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center"
+                onClick={handleFilterToggle}
+                className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
               >
                 <Filter className="w-5 h-5" />
                 Filters
               </button>
 
               {showFilters && (
-                <div className="absolute top-full right-0 mt-2 w-72 glass rounded-lg p-4 z-50 space-y-4">
+                <div className="absolute top-full right-0 mt-2 w-72 glass-dark glass-dark-thick rounded-lg p-4 z-50 space-y-4">
                   <div>
                     <label className="block text-white/70 text-sm font-medium mb-2">Status</label>
                     <select
-                      value={activeFilters.status || ""}
-                      onChange={(e) => setActiveFilters({ ...activeFilters, status: e.target.value })}
-                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
+                      value={filterDraft.status}
+                      onChange={(e) => setFilterDraft((prev) => ({ ...prev, status: e.target.value }))}
+                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
                     >
                       <option value="">All</option>
                       <option value="active">Active</option>
@@ -292,36 +316,61 @@ export default function Users() {
                       <option value="inactive">Inactive</option>
                     </select>
                   </div>
-
-                  <div className="border-t border-white/10 pt-4">
-                    <p className="text-white/60 text-xs">More filter options coming soon</p>
+                  <div>
+                    <label className="block text-white/70 text-sm font-medium mb-2">Date range</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="date"
+                        value={filterDraft.startDate}
+                        onChange={(e) => setFilterDraft((prev) => ({ ...prev, startDate: e.target.value }))}
+                        className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
+                      />
+                      <input
+                        type="date"
+                        value={filterDraft.endDate}
+                        onChange={(e) => setFilterDraft((prev) => ({ ...prev, endDate: e.target.value }))}
+                        className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
+                      />
+                    </div>
+                    <p className="text-white/40 text-xs mt-2">Filter by created date.</p>
                   </div>
+                  <button
+                    onClick={handleApplyFilters}
+                    className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Apply Filters
+                  </button>
                 </div>
               )}
             </div>
 
             {/* Sort Button */}
-            <div className="relative">
+            <div className="relative" ref={sortRef}>
               <button
-                onClick={() => setShowSort(!showSort)}
-                className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center"
+                onClick={handleSortToggle}
+                className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
               >
                 <ArrowUpDown className="w-5 h-5" />
                 Sort
               </button>
 
               {showSort && (
-                <div className="absolute top-full right-0 mt-2 w-48 glass rounded-lg p-4 z-50 space-y-3">
+                <div className="absolute top-full right-0 mt-2 w-48 glass-dark glass-dark-thick rounded-lg p-4 z-50 space-y-3">
                   <div>
                     <label className="block text-white/70 text-sm font-medium mb-2">Sort By</label>
                     <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as "fullName" | "createdAt" | "wallet")}
-                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
+                      value={sortDraft.sortBy}
+                      onChange={(e) => setSortDraft((prev) => ({
+                        ...prev,
+                        sortBy: e.target.value as USERS_SORT_OPTIONS,
+                      }))}
+                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
                     >
-                      <option value="fullName">Name</option>
-                      <option value="createdAt">Join Date</option>
-                      <option value="wallet">Wallet</option>
+                      <option value={USERS_SORT_OPTIONS.CREATED_AT}>Joined Date</option>
+                      <option value={USERS_SORT_OPTIONS.FULL_NAME}>Full Name</option>
+                      <option value={USERS_SORT_OPTIONS.WALLET_BALANCE}>Wallet Balance</option>
+                      <option value={USERS_SORT_OPTIONS.EMAIL}>Email</option>
+                      <option value={USERS_SORT_OPTIONS.PHONE}>Phone</option>
                     </select>
                   </div>
 
@@ -329,9 +378,14 @@ export default function Users() {
                     <label className="block text-white/70 text-sm font-medium mb-2">Order</label>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setSortOrder("asc")}
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
-                          sortOrder === "asc"
+                        onClick={() =>
+                          setSortDraft((prev) => ({
+                            ...prev,
+                            sortOrder: SORT_ORDER.ASC,
+                          }))
+                        }
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+                          sortDraft.sortOrder === SORT_ORDER.ASC
                             ? "bg-[#CEFE10] text-black"
                             : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
                         }`}
@@ -339,9 +393,14 @@ export default function Users() {
                         Asc
                       </button>
                       <button
-                        onClick={() => setSortOrder("desc")}
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
-                          sortOrder === "desc"
+                        onClick={() =>
+                          setSortDraft((prev) => ({
+                            ...prev,
+                            sortOrder: SORT_ORDER.DESC,
+                          }))
+                        }
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+                          sortDraft.sortOrder === SORT_ORDER.DESC
                             ? "bg-[#CEFE10] text-black"
                             : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
                         }`}
@@ -350,6 +409,12 @@ export default function Users() {
                       </button>
                     </div>
                   </div>
+                  <button
+                    onClick={handleApplySort}
+                    className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Apply Sort
+                  </button>
                 </div>
               )}
             </div>
@@ -373,13 +438,15 @@ export default function Users() {
               </tr>
               </thead>
               <tbody>
-              {filteredAndSortedUsers.map((user) => {
+              {users.map((user) => {
                 const status = computeStatus(user);
                 return (
                   <tr key={user.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4 text-white font-semibold">{user.fullName}</td>
                     <td className="px-6 py-4 text-white/70 text-sm">{user.email ?? "-"}</td>
-                    <td className="px-6 py-4 text-white font-semibold">{user.wallet}</td>
+                    <td className="px-6 py-4 text-white font-semibold">
+                      {formatCurrency(Number(user.walletBalance))}
+                    </td>
                     <td className="px-6 py-4 text-white text-sm">{user.cardsOwned}</td>
                     <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}>
@@ -387,7 +454,7 @@ export default function Users() {
                         </span>
                     </td>
                     <td className="px-6 py-4 text-white/70 text-sm">{user.role}</td>
-                    <td className="px-6 py-4 text-white/70 text-sm">{user.createdAtStr ?? new Date(user.createdAt).toISOString().split('T')[0]}</td>
+                    <td className="px-6 py-4 text-white/70 text-sm">{new Date(user.createdAt).toISOString().split('T')[0]}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <Link
@@ -433,7 +500,7 @@ export default function Users() {
 
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4">
-          {filteredAndSortedUsers.map((user) => {
+          {users.map((user) => {
             const status = computeStatus(user);
             return (
               <div key={user.id} className="glass p-4 rounded-2xl">
@@ -444,7 +511,9 @@ export default function Users() {
                   <div className="grid grid-cols-3 gap-3 mb-4">
                     <div>
                       <p className="text-white/50 text-xs">Wallet</p>
-                      <p className="text-white font-semibold">{user.wallet}</p>
+                      <p className="text-white font-semibold">
+                        {formatCurrency(Number(user.walletBalance))}
+                      </p>
                     </div>
                     <div>
                       <p className="text-white/50 text-xs">Cards</p>
@@ -471,13 +540,13 @@ export default function Users() {
                       setEditingUser(user);
                       setShowUserModal(true);
                     }}
-                    className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors"
+                    className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => setShowDeleteModal(user)}
-                    className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-semibold py-2 px-3 rounded-lg transition-colors"
+                    className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
                   >
                     Delete
                   </button>
@@ -486,6 +555,16 @@ export default function Users() {
             );
           })}
         </div>
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={total}
+          pageSize={limit}
+          onPageChange={handlePageChange}
+          isLoading={isLoading}
+          className="mt-6"
+        />
       </div>
 
       {/* Modals */}
@@ -520,7 +599,7 @@ export default function Users() {
               <div className="space-y-3 mb-6">
                 <button
                   onClick={() => handleDeleteUser(showDeleteModal, false)}
-                  className="w-full text-left p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/30 transition-colors"
+                  className="w-full text-left p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/30 transition-colors cursor-pointer"
                 >
                   <p className="text-yellow-400 font-semibold">Soft Delete (Archive)</p>
                   <p className="text-yellow-400/70 text-sm">User will be marked as inactive but data remains</p>
@@ -528,7 +607,7 @@ export default function Users() {
 
                 <button
                   onClick={() => handleDeleteUser(showDeleteModal, true)}
-                  className="w-full text-left p-4 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
+                  className="w-full text-left p-4 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors cursor-pointer"
                 >
                   <p className="text-red-400 font-semibold">Purge (Permanent Delete)</p>
                   <p className="text-red-400/70 text-sm">User and all data will be permanently removed</p>
@@ -537,7 +616,7 @@ export default function Users() {
 
               <button
                 onClick={() => setShowDeleteModal(null)}
-                className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
               >
                 Cancel
               </button>
