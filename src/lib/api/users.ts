@@ -1,4 +1,13 @@
-import {apiClient, CreateUserData, GetUsersParams, PaginatedResponse, UpdateUserData, User} from '@/lib';
+import {
+  apiClient,
+  CreateUserData,
+  GetUserLoginActivitiesParams,
+  GetUsersParams,
+  LoginActivity,
+  PaginatedResponse,
+  UpdateUserData,
+  User
+} from '@/lib';
 
 export const usersAPI = {
   getUsers: async (params?: GetUsersParams): Promise<PaginatedResponse<User>> => {
@@ -35,6 +44,14 @@ export const usersAPI = {
 
   unsuspendUser: async (userID: string): Promise<User> => {
     const response = await apiClient.patch(`/users/${userID}/unsuspend`);
+    return response.data;
+  },
+
+  getUserLoginActivities: async (
+    userID: string,
+    params?: GetUserLoginActivitiesParams
+  ): Promise<PaginatedResponse<LoginActivity>> => {
+    const response = await apiClient.get(`/users/${userID}/login-activities`, { params });
     return response.data;
   },
 };

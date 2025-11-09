@@ -87,6 +87,11 @@ export interface LoginActivity {
   user?: User;
 }
 
+export interface GetUserLoginActivitiesParams {
+  page?: number;
+  limit?: number;
+}
+
 export interface UserFormData {
   fullName: string;
   email: string;

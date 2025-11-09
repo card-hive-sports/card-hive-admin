@@ -1,15 +1,15 @@
 import { create } from 'zustand';
-import {User} from "@/lib";
+import {AuthResponse} from "@/lib";
 import React from "react";
 
 interface AuthStore {
   accessToken: string | null;
-  user: User | null;
+  user: AuthResponse['user'] | null;
   isAuthenticated: boolean;
 
   setAccessToken: (token: string) => void;
-  setUser: (user: User) => void;
-  setAuth: (token: string, user: User) => void;
+  setUser: (user: AuthResponse['user']) => void;
+  setAuth: (token: string, user: AuthResponse['user']) => void;
   clearAuth: () => void;
 }
 
