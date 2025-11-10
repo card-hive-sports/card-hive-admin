@@ -1,7 +1,7 @@
 'use client';
 
 import { TrendingUp, Users, ShoppingCart, Zap } from "lucide-react";
-import {MetricCard, SimpleBarChart, SimpleLineChart, SimplePieChart} from "@/lib";
+import {GameCard, MetricCard, SimpleBarChart, SimpleLineChart, SimplePieChart} from "@/lib";
 
 const recentTransactions = [
   { id: 1, user: "John Doe", card: "LeBron James", amount: "$150", status: "Completed" },
@@ -68,25 +68,28 @@ const Home = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SimpleBarChart data={revenueData} title="Revenue Trend" />
 
-        <div className="glass p-6 rounded-2xl overflow-hidden">
+        <GameCard className="p-6 overflow-hidden">
           <h3 className="text-white text-lg font-semibold mb-4">Recent Transactions</h3>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left px-0 sm:px-4 py-3 text-white/70 font-semibold text-sm">User</th>
-                <th className="text-left px-0 sm:px-4 py-3 text-white/70 font-semibold text-sm">Card</th>
-                <th className="text-left px-0 sm:px-4 py-3 text-white/70 font-semibold text-sm">Amount</th>
-                <th className="text-left px-4 py-3 text-white/70 font-semibold text-sm hidden xl:block">Status</th>
-              </tr>
+                <tr className="border-b border-white/10 text-white/70">
+                  <th className="text-left px-0 sm:px-4 py-3 font-semibold">User</th>
+                  <th className="text-left px-0 sm:px-4 py-3 font-semibold">Card</th>
+                  <th className="text-left px-0 sm:px-4 py-3 font-semibold">Amount</th>
+                  <th className="text-left px-4 py-3 font-semibold hidden xl:block">Status</th>
+                </tr>
               </thead>
               <tbody>
               {recentTransactions.map((tx) => (
-                <tr key={tx.id} className="border-b border-white/5 hover:bg-white/5 transition-colors duration-200">
-                  <td className="px-0 sm:px-4 py-3 text-white text-sm">{tx.user}</td>
-                  <td className="px-0 sm:px-4 py-3 text-white/70 text-sm">{tx.card}</td>
-                  <td className="px-0 sm:px-4 py-3 text-white text-sm font-semibold">{formatCurrency(tx.amount)}</td>
-                  <td className="px-4 py-3 text-sm hidden xl:block">
+                <tr
+                  key={tx.id}
+                  className="border-b border-white/5 transition-all duration-200 hover:bg-[#CEFE10]/5 hover:shadow-[0_10px_20px_rgba(206,254,16,0.15)]"
+                >
+                  <td className="px-0 sm:px-4 py-3 text-white">{tx.user}</td>
+                  <td className="px-0 sm:px-4 py-3 text-white/70">{tx.card}</td>
+                  <td className="px-0 sm:px-4 py-3 text-white font-semibold">{formatCurrency(tx.amount)}</td>
+                  <td className="px-4 py-3 hidden xl:block">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           tx.status === "Completed"
@@ -104,7 +107,7 @@ const Home = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </GameCard>
       </div>
     </div>
   );

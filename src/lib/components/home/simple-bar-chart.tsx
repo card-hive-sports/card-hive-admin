@@ -1,4 +1,5 @@
 import {FC} from "react";
+import {GameCard} from "@/lib/ui";
 
 interface SimpleBarChartProps {
   data: Array<{
@@ -12,8 +13,8 @@ export const SimpleBarChart: FC<SimpleBarChartProps> = ({ data, title }) =>  {
   const maxValue = Math.max(...data.map((d) => d.value));
 
   return (
-    <div className="glass p-6 rounded-2xl">
-      <h3 className="text-white text-lg font-semibold mb-6">{title}</h3>
+    <GameCard className="p-6">
+      <h3 className="text-white text-lg font-semibold mb-6 tracking-wide">{title}</h3>
       <div className="space-y-4">
         {data.map((item, index) => (
           <div key={index}>
@@ -21,15 +22,15 @@ export const SimpleBarChart: FC<SimpleBarChartProps> = ({ data, title }) =>  {
               <span className="text-white/70 text-sm">{item.label}</span>
               <span className="text-white font-semibold">${item.value.toLocaleString()}</span>
             </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-2.5 bg-white/5 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-[#CEFE10] to-[#FF5500] rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-[#CEFE10] via-[#FF8A00] to-[#FF00FF] rounded-full transition-all duration-500 shadow-[0_5px_15px_rgba(206,254,16,0.5)]"
                 style={{ width: `${(item.value / maxValue) * 100}%` }}
               />
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </GameCard>
   );
 }

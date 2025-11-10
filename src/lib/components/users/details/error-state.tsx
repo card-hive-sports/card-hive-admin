@@ -1,4 +1,5 @@
 import {AlertCircle} from "lucide-react";
+import {GameCard, GameButton} from "@/lib/ui";
 
 interface ErrorStateProps {
   message: string;
@@ -6,16 +7,13 @@ interface ErrorStateProps {
 }
 
 export const ErrorState = ({ message, onRetry }: ErrorStateProps) => (
-  <div className="glass p-6 rounded-2xl flex flex-col gap-4">
+  <GameCard className="p-6 flex flex-col gap-4">
     <div className="flex items-center gap-3">
       <AlertCircle className="w-5 h-5 text-red-400" />
       <p className="text-white/80">{message}</p>
     </div>
-    <button
-      onClick={onRetry}
-      className="self-start bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
-    >
+    <GameButton onClick={onRetry} size="sm" className="self-start">
       Try again
-    </button>
-  </div>
+    </GameButton>
+  </GameCard>
 );

@@ -1,5 +1,6 @@
 import {ArrowDown, ArrowUp} from "lucide-react";
 import {FC} from "react";
+import {GameCard} from "@/lib/ui";
 
 interface MetricCardProps {
   icon: React.ComponentType<any>;
@@ -17,18 +18,24 @@ export const MetricCard: FC<MetricCardProps> = ({
   positive,
 }) => {
   return (
-    <div className="glass p-6 rounded-2xl">
-      <div className="flex items-center justify-between mb-4">
-        <div className="w-12 h-12 rounded-full bg-[#CEFE10]/20 flex items-center justify-center">
+    <GameCard className="p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#CEFE10]/30 to-[#ff8a00]/40 flex items-center justify-center shadow-[0_10px_25px_rgba(206,254,16,0.25)]">
           <Icon className="w-6 h-6 text-[#CEFE10]" />
         </div>
-        <div className={`flex items-center gap-1 text-sm font-semibold ${positive ? "text-green-400" : "text-red-400"}`}>
+        <div
+          className={`flex items-center gap-1 text-sm font-semibold ${
+            positive ? "text-emerald-300" : "text-red-300"
+          }`}
+        >
           {positive ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
           {change}
         </div>
       </div>
-      <h3 className="text-white/70 text-sm font-medium mb-1">{label}</h3>
-      <p className="text-white text-2xl font-bold">{value}</p>
-    </div>
+      <div>
+        <h3 className="text-white/70 text-sm font-medium">{label}</h3>
+        <p className="text-white text-2xl font-bold mt-1 tracking-wide">{value}</p>
+      </div>
+    </GameCard>
   );
 }

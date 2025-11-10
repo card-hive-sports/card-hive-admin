@@ -1,5 +1,6 @@
 import {ReactNode} from "react";
 import {clsx} from "clsx";
+import {GameCard} from "@/lib/ui";
 
 type Alignment = "left" | "center" | "right";
 
@@ -43,11 +44,11 @@ export const DataTable = <T,>({
 
   return (
     <div className={clsx("space-y-4", className)}>
-      <div className="hidden md:block glass rounded-2xl overflow-hidden">
+      <GameCard asChild variant="glass" className="hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/10">
+              <tr className="border-b border-white/10 bg-white/5">
                 {columns.map((column) => (
                   <th
                     key={column.id}
@@ -69,7 +70,7 @@ export const DataTable = <T,>({
                   <tr
                     key={key}
                     className={clsx(
-                      "border-b border-white/5 hover:bg-white/5 transition-colors",
+                      "border-b border-white/5 transition-all duration-200 hover:bg-[#CEFE10]/5 hover:shadow-[0_10px_20px_rgba(206,254,16,0.15)]",
                       rowClassName?.(row, rowIndex)
                     )}
                   >
@@ -91,14 +92,18 @@ export const DataTable = <T,>({
             </tbody>
           </table>
         </div>
-      </div>
+      </GameCard>
 
       {renderMobileCard && (
         <div className="md:hidden flex flex-col gap-4">
           {data.map((row, index) => (
-            <div key={keyExtractor ? keyExtractor(row, index) : index} className="glass rounded-2xl p-4 space-y-4">
+            <GameCard
+              variant="glass"
+              key={keyExtractor ? keyExtractor(row, index) : index}
+              className="p-4 space-y-4"
+            >
               {renderMobileCard(row, index)}
-            </div>
+            </GameCard>
           ))}
         </div>
       )}

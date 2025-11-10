@@ -1,4 +1,5 @@
 import {FC} from "react";
+import {GameCard} from "@/lib/ui";
 
 interface SimplePieChartProps {
   data: Array<{
@@ -36,8 +37,8 @@ export const SimplePieChart: FC<SimplePieChartProps> = ({ data, title }) => {
   });
 
   return (
-    <div className="glass p-6 rounded-2xl h-full flex flex-col">
-      <h3 className="text-white text-lg font-semibold mb-6">{title}</h3>
+    <GameCard className="p-6 h-full flex flex-col">
+      <h3 className="text-white text-lg font-semibold mb-6 tracking-wide">{title}</h3>
       <div className="flex flex-col gap-8 items-center h-full justify-center">
         <div className={"flex flex-col sm:flex-row gap-8 items-center"}>
           <svg className="w-56 h-56 flex-shrink-0" viewBox="0 0 100 100">
@@ -61,6 +62,6 @@ export const SimplePieChart: FC<SimplePieChartProps> = ({ data, title }) => {
           </div>
         </div>
       </div>
-    </div>
+    </GameCard>
   );
 }

@@ -1,4 +1,5 @@
 import {FC} from "react";
+import {GameCard} from "@/lib/ui";
 
 interface SimpleLineChartProps {
   data: Array<{
@@ -22,9 +23,9 @@ export const SimpleLineChart: FC<SimpleLineChartProps> = ({ data, title }) => {
   const pathData = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
   return (
-    <div className="glass p-6 rounded-2xl">
-      <h3 className="text-white text-lg font-semibold mb-6">{title}</h3>
-      <div className="relative h-64 bg-black/20 rounded-lg overflow-hidden">
+    <GameCard className="p-6">
+      <h3 className="text-white text-lg font-semibold mb-6 tracking-wide">{title}</h3>
+      <div className="relative h-64 bg-gradient-to-b from-white/5 to-transparent rounded-2xl overflow-hidden border border-white/10">
         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
           {/* Grid lines */}
           <line x1="0" y1="25" x2="100" y2="25" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
@@ -59,6 +60,6 @@ export const SimpleLineChart: FC<SimpleLineChartProps> = ({ data, title }) => {
           <p className="text-white font-bold">${minValue.toLocaleString()}</p>
         </div>
       </div>
-    </div>
+    </GameCard>
   );
 }

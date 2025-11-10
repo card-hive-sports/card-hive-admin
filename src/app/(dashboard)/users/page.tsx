@@ -357,7 +357,6 @@ export default function Users() {
   const renderUserMobileCard = (user: User) => {
     const status = computeStatus(user);
     const superAdmin = isSuperAdmin(user);
-    const disabledClasses = superAdmin ? "opacity-40 cursor-not-allowed pointer-events-none" : "cursor-pointer";
     return (
       <>
         <div className="mb-4">
@@ -365,19 +364,19 @@ export default function Users() {
           <p className="text-white/60 text-sm mb-3">{user.email ?? "-"}</p>
 
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
               <p className="text-white/50 text-xs">Wallet</p>
               <p className="text-white font-semibold">
                 {formatCurrency(Number(user.walletBalance))}
               </p>
             </div>
-            <div>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
               <p className="text-white/50 text-xs">Cards</p>
               <p className="text-white font-semibold">{user.cardsOwned}</p>
             </div>
-            <div>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
               <p className="text-white/50 text-xs">Status</p>
-              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusColor(status)}`}>
+              <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}>
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </span>
             </div>

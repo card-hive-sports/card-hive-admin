@@ -4,7 +4,7 @@ import {FC, ReactNode, useEffect, useRef, useState} from "react";
 import Link from "next/link";
 import {Menu, X, LayoutDashboard, LogOut, Settings, Users} from "lucide-react";
 import {usePathname, useRouter} from "next/navigation";
-import {authAPI, useAuth} from "@/lib";
+import {authAPI, useAuth, GameButton} from "@/lib";
 import Image from "next/image";
 
 interface LayoutProps {
@@ -62,22 +62,22 @@ const Layout: FC<LayoutProps> = ({ children }) => {
           <span className="text-white font-bold text-lg">Card Hive</span>
         </Link>
 
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-3">
           {menuItems.map((item) => {
             const Icon = item.icon;
+            const active = isActive(item.path);
             return (
-              <Link
+              <GameButton
                 key={item.path}
-                href={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
-                  isActive(item.path)
-                    ? "bg-[#CEFE10] text-black font-semibold"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
+                asChild
+                variant={active ? "primary" : "secondary"}
+                className="w-full justify-start normal-case px-4 py-3"
               >
-                <Icon className="w-5 h-5" />
-                {item.name}
-              </Link>
+                <Link href={item.path} className="flex items-center gap-3 w-full">
+                  <Icon className="w-5 h-5" />
+                  <span className="text-sm font-semibold">{item.name}</span>
+                </Link>
+              </GameButton>
             );
           })}
         </nav>
@@ -102,23 +102,23 @@ const Layout: FC<LayoutProps> = ({ children }) => {
           <X className="w-6 h-6" />
         </button>
 
-        <nav className="mt-12 space-y-2">
+        <nav className="mt-12 space-y-3">
           {menuItems.map((item) => {
             const Icon = item.icon;
+            const active = isActive(item.path);
             return (
-              <Link
+              <GameButton
                 key={item.path}
-                href={item.path}
+                asChild
+                variant={active ? "primary" : "secondary"}
+                className="w-full justify-start normal-case px-4 py-3"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
-                  isActive(item.path)
-                    ? "bg-[#CEFE10] text-black font-semibold"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
               >
-                <Icon className="w-5 h-5" />
-                {item.name}
-              </Link>
+                <Link href={item.path} className="flex items-center gap-3 w-full">
+                  <Icon className="w-5 h-5" />
+                  <span className="text-sm font-semibold">{item.name}</span>
+                </Link>
+              </GameButton>
             );
           })}
         </nav>

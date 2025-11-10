@@ -1,7 +1,8 @@
 import {Skeleton, SkeletonCircle, SkeletonText} from "../../ui/skeleton";
+import {GameCard} from "@/lib/ui";
 
 export const AccountInfoSkeleton = () => (
-  <div className="glass p-6 rounded-2xl space-y-5">
+  <GameCard className="p-6 space-y-5">
     <div className="flex items-center justify-between">
       <Skeleton className="h-5 w-40" />
       <Skeleton className="h-5 w-20" />
@@ -25,11 +26,11 @@ export const AccountInfoSkeleton = () => (
         <Skeleton className="h-4 w-32" />
       </div>
     </div>
-  </div>
+  </GameCard>
 );
 
 export const AccountMetricsSkeleton = () => (
-  <div className="glass p-6 rounded-2xl">
+  <GameCard className="p-6">
     <Skeleton className="h-5 w-32 mb-6" />
     <div className="grid grid-cols-2 gap-4">
       {Array.from({ length: 4 }).map((_, index) => (
@@ -40,11 +41,11 @@ export const AccountMetricsSkeleton = () => (
         </div>
       ))}
     </div>
-  </div>
+  </GameCard>
 );
 
 export const LoginMethodsSkeleton = () => (
-  <div className="glass p-6 rounded-2xl space-y-4">
+  <GameCard className="p-6 space-y-4">
     <Skeleton className="h-5 w-48" />
     <div className="flex flex-wrap gap-2">
       {Array.from({ length: 4 }).map((_, index) => (
@@ -55,11 +56,11 @@ export const LoginMethodsSkeleton = () => (
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-4 w-28" />
     </div>
-  </div>
+  </GameCard>
 );
 
 export const LoginActivitySkeleton = () => (
-  <div className="glass p-6 rounded-2xl space-y-3">
+  <GameCard className="p-6 space-y-3">
     <Skeleton className="h-5 w-40" />
     {Array.from({ length: 3 }).map((_, index) => (
       <div key={`login-${index}`} className="p-4 bg-black/30 rounded-lg">
@@ -67,7 +68,7 @@ export const LoginActivitySkeleton = () => (
         <SkeletonText lines={2} />
       </div>
     ))}
-  </div>
+  </GameCard>
 );
 
 export const UserDetailSkeleton = () => (

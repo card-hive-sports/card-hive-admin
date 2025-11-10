@@ -12,15 +12,15 @@ const sizeClasses = {
 
 const variantClasses = {
   primary:
-    "bg-gradient-to-b from-[#CEFE10] via-[#b8ff2a] to-[#9CD80D] text-black shadow-[0_10px_25px_rgba(206,254,16,0.35)] hover:shadow-[0_15px_30px_rgba(206,254,16,0.45)]",
+    "bg-gradient-to-b from-[#CEFE10] via-[#b8ff2a] to-[#9CD80D] text-black shadow-[0_10px_505px_rgba(206,254,16,0.35)] hover:shadow-[0_15px_500px_rgba(206,254,16,0.45)]",
   secondary:
-    "bg-white/10 border border-white/20 text-white hover:bg-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.35)]",
+    "bg-white/10 text-white shadow-[0_8px_500px_rgba(0,0,0,0.35)]",
   ghost:
     "bg-transparent border border-[#CEFE10]/40 text-[#CEFE10] hover:bg-[#CEFE10]/10",
   danger:
-    "bg-gradient-to-b from-[#FF5F6D] via-[#ff3b4a] to-[#C81D25] text-white shadow-[0_10px_25px_rgba(255,71,87,0.35)] hover:shadow-[0_15px_35px_rgba(255,71,87,0.4)]",
+    "bg-gradient-to-b from-[#FF5F6D] via-[#ff3b4a] to-[#C81D25] text-white shadow-[0_10px_500px_rgba(255,71,87,0.35)] hover:shadow-[0_15px_500px_rgba(255,71,87,0.4)]",
   success:
-    "bg-gradient-to-b from-[#7CFFBE] via-[#4dff9a] to-[#00C97D] text-black shadow-[0_10px_25px_rgba(0,201,125,0.35)] hover:shadow-[0_15px_35px_rgba(0,201,125,0.45)]",
+    "bg-gradient-to-b from-[#7CFFBE] via-[#4dff9a] to-[#00C97D] text-black shadow-[0_10px_500px_rgba(0,201,125,0.35)] hover:shadow-[0_15px_500px_rgba(0,201,125,0.45)]",
 };
 
 type GameButtonProps = {

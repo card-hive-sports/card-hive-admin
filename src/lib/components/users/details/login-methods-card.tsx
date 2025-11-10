@@ -1,3 +1,5 @@
+import {GameCard} from "@/lib/ui";
+
 export interface ProviderChip {
   id: string;
   label: string;
@@ -15,7 +17,7 @@ export const LoginMethodsCard = ({
   kycStatusLabel,
   kycStatusClassName,
 }: LoginMethodsCardProps) => (
-  <div className="glass p-6 rounded-2xl space-y-4">
+  <GameCard className="p-6 space-y-4">
     <div>
       <h3 className="text-white text-lg font-semibold mb-2">Connected Login Methods</h3>
       {providers.length > 0 ? (
@@ -40,5 +42,5 @@ export const LoginMethodsCard = ({
         {kycStatusLabel}
       </p>
     </div>
-  </div>
+  </GameCard>
 );

@@ -1,6 +1,7 @@
 import {AlertCircle} from "lucide-react";
 import {Pagination} from "../../pagination";
 import {LoginActivitySkeleton} from "./skeletons";
+import {GameCard, GameButton} from "@/lib/ui";
 
 export interface LoginActivityDisplay {
   id: string;
@@ -39,18 +40,15 @@ export const LoginActivitySection = ({
 }: LoginActivitySectionProps) => {
   if (error && activities.length === 0) {
     return (
-      <div className="glass p-6 rounded-2xl flex flex-col gap-4">
+      <GameCard className="p-6 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-400" />
           <p className="text-white/80">{error}</p>
         </div>
-        <button
-          onClick={onRetry}
-          className="self-start bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
-        >
+        <GameButton onClick={onRetry} size="sm" className="self-start">
           Try again
-        </button>
-      </div>
+        </GameButton>
+      </GameCard>
     );
   }
 
@@ -59,7 +57,7 @@ export const LoginActivitySection = ({
   }
 
   return (
-    <div className="glass p-6 rounded-2xl space-y-4">
+    <GameCard className="p-6 space-y-4">
       <h3 className="text-white text-lg font-semibold">Recent Login Activity</h3>
 
       {activities.length ? (
@@ -67,8 +65,8 @@ export const LoginActivitySection = ({
           {activities.map((activity) => (
             <div
               key={activity.id}
-              className={`flex items-center justify-between p-4 bg-black/30 rounded-lg gap-4 ${
-                isLoading ? "opacity-70" : ""
+              className={`flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5 gap-4 transition-all duration-200 ${
+                isLoading ? "opacity-70" : "hover:border-[#CEFE10]/40 hover:shadow-[0_10px_25px_rgba(206,254,16,0.2)]"
               }`}
             >
               <div className="flex-1 min-w-0">
@@ -109,15 +107,17 @@ export const LoginActivitySection = ({
       {error && activities.length > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-yellow-200 text-sm">
           <span>{error}</span>
-          <button
+          <GameButton
+            size="sm"
+            variant="ghost"
             onClick={onRetry}
-            className="text-yellow-100 underline cursor-pointer disabled:opacity-50"
             disabled={isLoading}
+            className="text-yellow-100 uppercase tracking-wide"
           >
             Retry
-          </button>
+          </GameButton>
         </div>
       )}
-    </div>
+    </GameCard>
   );
 };
