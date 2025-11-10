@@ -10,6 +10,7 @@ import {
   formatCurrency,
   useDebouncedValue,
   User,
+  UserRole,
   COMPUTED_STATUS,
   USERS_SORT_OPTIONS,
   SORT_ORDER,
@@ -20,6 +21,8 @@ import {
   DataTableColumn
 } from "@/lib";
 import Link from "next/link";
+import { toast } from "sonner";
+import { showApiError } from "@/lib/utils/show-api-error";
 
 type ActiveFiltersState = {
   status: string;
@@ -49,12 +52,12 @@ export default function Users() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
   const [sortBy, setSortBy] = useState<USERS_SORT_OPTIONS>(USERS_SORT_OPTIONS.CREATED_AT);
-  const [sortOrder, setSortOrder] = useState<SORT_ORDER>(SORT_ORDER.ASC);
+  const [sortOrder, setSortOrder] = useState<SORT_ORDER>(SORT_ORDER.DESC);
   const [activeFilters, setActiveFilters] = useState<ActiveFiltersState>(() => initialFiltersState());
   const [filterDraft, setFilterDraft] = useState<ActiveFiltersState>(() => initialFiltersState());
   const [sortDraft, setSortDraft] = useState<{ sortBy: USERS_SORT_OPTIONS; sortOrder: SORT_ORDER }>({
     sortBy: USERS_SORT_OPTIONS.CREATED_AT,
-    sortOrder: SORT_ORDER.ASC,
+    sortOrder: SORT_ORDER.DESC,
   });
 
   const [users, setUsers] = useState<User[]>([]);
@@ -130,7 +133,7 @@ export default function Users() {
         hasPrev: response.pagination.hasPrev,
       }));
     } catch (error) {
-      console.error('Failed to fetch users:', error);
+      showApiError('fetch users', error);
     } finally {
       setIsLoading(false);
     }
@@ -160,19 +163,22 @@ export default function Users() {
     return "bg-gray-500/20 text-gray-400";
   };
 
+  const isSuperAdmin = (user: User) => user.role === UserRole.SUPER_ADMIN;
+
   const handleCreateUser = async (formData: UserFormData) => {
     try {
       await usersAPI.createUser({
         fullName: formData.fullName,
         email: formData.email || undefined,
         phone: formData.phone || undefined,
-        walletBalance: Number(formData.walletBalance),
-        walletCurrency: formData.walletCurrency,
+        dateOfBirth: formData.dateOfBirth || undefined,
+        role: formData.role,
       });
       await fetchUsers(search);
       setShowUserModal(false);
+      toast.success("User created successfully");
     } catch (error) {
-      console.error('Failed to create user:', error);
+      showApiError('create user', error);
     }
   };
 
@@ -183,15 +189,14 @@ export default function Users() {
         fullName: formData.fullName,
         email: formData.email || undefined,
         phone: formData.phone || undefined,
-        isActive: formData.status !== 'inactive',
-        walletBalance: Number(formData.walletBalance),
-        walletCurrency: formData.walletCurrency,
+        dateOfBirth: formData.dateOfBirth || undefined,
       });
       await fetchUsers(search);
       setEditingUser(null);
       setShowUserModal(false);
+      toast.success("User updated successfully");
     } catch (error) {
-      console.error('Failed to update user:', error);
+      showApiError('update user', error);
     }
   };
 
@@ -200,8 +205,9 @@ export default function Users() {
       await usersAPI.deleteUser(user.id, isPurge);
       await fetchUsers(search);
       setShowDeleteModal(null);
+      toast.success(isPurge ? "User permanently deleted" : "User moved to trash");
     } catch (error) {
-      console.error('Failed to delete user:', error);
+      showApiError(isPurge ? 'permanently delete user' : 'delete user', error);
     }
   };
 
@@ -210,8 +216,9 @@ export default function Users() {
       await usersAPI.unarchiveUser(user.id);
       await fetchUsers(search);
       setShowDeleteModal(null);
+      toast.success("User restored successfully");
     } catch (error) {
-      console.error('Failed to delete user:', error);
+      showApiError('restore user', error);
     }
   };
 
@@ -219,12 +226,14 @@ export default function Users() {
     try {
       if (user.isActive) {
         await usersAPI.suspendUser(user.id);
+        toast.success("User suspended");
       } else {
         await usersAPI.unsuspendUser(user.id);
+        toast.success("User unsuspended");
       }
       await fetchUsers(search);
     } catch (error) {
-      console.error('Failed to suspend/unsuspend user:', error);
+      showApiError(user.isActive ? 'suspend user' : 'unsuspend user', error);
     }
   };
 
@@ -279,41 +288,65 @@ export default function Users() {
       id: "actions",
       header: "Actions",
       align: "right",
-      cell: (user) => (
-        <div className="flex items-center justify-end gap-2">
-          <Link
-            href={`/users/${user.id}`}
-            className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors"
-            title="View"
-          >
-            <Eye className="w-4 h-4" />
-          </Link>
-          <button
-            onClick={() => {
-              setEditingUser(user);
-              setShowUserModal(true);
-            }}
-            className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-            title="Edit"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => handleSuspendUser(user)}
-            className="p-2 text-white/70 hover:text-yellow-400 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-            title={user.isActive ? "Suspend" : "Unsuspend"}
-          >
-            <AlertCircle className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setShowDeleteModal(user)}
-            className="p-2 text-white/70 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-            title="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ),
+      cell: (user) => {
+        const superAdmin = isSuperAdmin(user);
+        const disabledClasses = superAdmin ? "opacity-40 cursor-not-allowed pointer-events-none" : "cursor-pointer";
+
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <Link
+              href={`/users/${user.id}`}
+              className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors"
+              title="View"
+            >
+              <Eye className="w-4 h-4" />
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                if (superAdmin) return;
+                setEditingUser(user);
+                setShowUserModal(true);
+              }}
+              disabled={superAdmin}
+              className={`p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
+              title={superAdmin ? "Action disabled for Super Admin" : "Edit"}
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (superAdmin) return;
+                handleSuspendUser(user);
+              }}
+              disabled={superAdmin}
+              className={`p-2 text-white/70 hover:text-yellow-400 hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
+              title={
+                superAdmin
+                  ? "Action disabled for Super Admin"
+                  : user.isActive
+                  ? "Suspend"
+                  : "Unsuspend"
+              }
+            >
+              <AlertCircle className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (superAdmin) return;
+                setShowDeleteModal(user);
+              }}
+              disabled={superAdmin}
+              className={`p-2 text-white/70 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
+              title={superAdmin ? "Action disabled for Super Admin" : "Delete"}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      },
       headerClassName: "text-right",
       cellClassName: "text-right",
     },
@@ -321,6 +354,8 @@ export default function Users() {
 
   const renderUserMobileCard = (user: User) => {
     const status = computeStatus(user);
+    const superAdmin = isSuperAdmin(user);
+    const disabledClasses = superAdmin ? "opacity-40 cursor-not-allowed pointer-events-none" : "cursor-pointer";
     return (
       <>
         <div className="mb-4">
@@ -355,17 +390,25 @@ export default function Users() {
             View
           </Link>
           <button
+            type="button"
             onClick={() => {
+              if (superAdmin) return;
               setEditingUser(user);
               setShowUserModal(true);
             }}
-            className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
+            disabled={superAdmin}
+            className={`flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors ${disabledClasses}`}
           >
             Edit
           </button>
           <button
-            onClick={() => setShowDeleteModal(user)}
-            className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
+            type="button"
+            onClick={() => {
+              if (superAdmin) return;
+              setShowDeleteModal(user);
+            }}
+            disabled={superAdmin}
+            className={`flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-semibold py-2 px-3 rounded-lg transition-colors ${disabledClasses}`}
           >
             Delete
           </button>
@@ -543,6 +586,7 @@ export default function Users() {
 
       {/* Modals */}
       <UserModal
+        key={editingUser ? `edit-${editingUser.id}` : "create"}
         isOpen={showUserModal}
         onClose={() => {
           setShowUserModal(false);

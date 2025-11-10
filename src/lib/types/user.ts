@@ -49,6 +49,7 @@ export interface User {
   fullName: string;
   email: string | null;
   phone: string | null;
+  dateOfBirth?: string | null;
   role: UserRole;
   kycStatus: KYCStatus;
   isActive: boolean;
@@ -96,9 +97,8 @@ export interface UserFormData {
   fullName: string;
   email: string;
   phone: string;
-  walletBalance?: string;
-  walletCurrency?: string;
-  status: string;
+  dateOfBirth: string;
+  role: UserRole;
 }
 
 export interface GetUsersParams {
@@ -119,7 +119,8 @@ export interface CreateUserData {
   fullName: string;
   email?: string;
   phone?: string;
-  role?: string;
+  dateOfBirth?: string;
+  role?: UserRole;
   walletBalance?: number;
   walletCurrency?: string;
 }
@@ -128,7 +129,8 @@ export interface UpdateUserData {
   fullName?: string;
   email?: string;
   phone?: string;
-  role?: string;
+  dateOfBirth?: string;
+  role?: UserRole;
   kycStatus?: string;
   isActive?: boolean;
   walletBalance?: number;

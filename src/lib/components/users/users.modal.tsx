@@ -1,6 +1,6 @@
-import {FormEvent, useState} from "react";
+import {FormEvent, useState, useEffect} from "react";
 import { X } from "lucide-react";
-import {User, UserFormData} from "@/lib";
+import {User, UserFormData, UserRole} from "@/lib";
 
 interface UserModalProps {
   isOpen: boolean;
@@ -15,22 +15,44 @@ export const UserModal = ({ isOpen, onClose, onSubmit, initialData, title }: Use
     fullName: initialData?.fullName ?? "",
     email: initialData?.email ?? "",
     phone: initialData?.phone ?? "",
-    walletBalance: initialData?.walletBalance ?? "",
-    walletCurrency: initialData?.walletCurrency ?? "",
-    status: initialData?.isActive ? "active" : "inactive",
+    dateOfBirth: initialData?.dateOfBirth ? initialData.dateOfBirth.split("T")[0] : "",
+    role: initialData?.role ?? UserRole.CUSTOMER,
   });
+
+  // Resync modal form state when toggling between create/edit modes without triggering extra renders
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const nextFormData: UserFormData = initialData
+      ? {
+          fullName: initialData.fullName,
+          email: initialData.email ?? "",
+          phone: initialData.phone ?? "",
+          dateOfBirth: initialData.dateOfBirth ? initialData.dateOfBirth.split("T")[0] : "",
+          role: initialData.role ?? UserRole.CUSTOMER,
+        }
+      : {
+          fullName: "",
+          email: "",
+          phone: "",
+          dateOfBirth: "",
+          role: UserRole.CUSTOMER,
+        };
+
+    setFormData((prev) =>
+      prev.fullName === nextFormData.fullName &&
+      prev.email === nextFormData.email &&
+      prev.phone === nextFormData.phone &&
+      prev.dateOfBirth === nextFormData.dateOfBirth &&
+      prev.role === nextFormData.role
+        ? prev
+        : nextFormData,
+    );
+  }, [initialData, isOpen]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
-    setFormData({
-      fullName: "",
-      email: "",
-      phone: "",
-      walletBalance: "",
-      walletCurrency: "",
-      status: "active",
-    });
     onClose();
   };
 
@@ -85,28 +107,28 @@ export const UserModal = ({ isOpen, onClose, onSubmit, initialData, title }: Use
             </div>
 
             <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">WalletBalance Balance</label>
+              <label className="block text-white/70 text-sm font-medium mb-2">Date of Birth</label>
               <input
-                type="text"
-                value={formData.walletBalance}
-                onChange={(e) => setFormData({ ...formData, walletBalance: e.target.value })}
-                className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
-                placeholder="$0.00"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#CEFE10] cursor-pointer"
               />
             </div>
 
-            <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#CEFE10] cursor-pointer"
-              >
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+            {!initialData && (
+              <div>
+                <label className="block text-white/70 text-sm font-medium mb-2">Role</label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                  className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#CEFE10] cursor-pointer"
+                >
+                  <option value={UserRole.CUSTOMER}>Customer</option>
+                  <option value={UserRole.ADMIN}>Admin</option>
+                </select>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-4">
               <button

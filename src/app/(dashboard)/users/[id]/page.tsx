@@ -20,7 +20,8 @@ import {
   computeUserStatus,
   formatCurrency,
   usersAPI,
-  firstLetterToUpper
+  firstLetterToUpper,
+  authAPI
 } from "@/lib";
 
 const LOGIN_PAGE_LIMIT = 5;
@@ -168,7 +169,7 @@ const UserDetail = () => {
     setLoginLoading(true);
     setLoginError(null);
     try {
-      const response = await usersAPI.getUserLoginActivities(userID, { page, limit });
+      const response = await authAPI.getUserLoginActivities(userID, { page, limit });
       setLoginActivities(response.data);
       setLoginPagination({
         page: response.pagination.page,

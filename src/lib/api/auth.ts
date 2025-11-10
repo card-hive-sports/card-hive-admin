@@ -1,4 +1,4 @@
-import {apiClient, AuthResponse, EmailLoginData, ForgotPasswordData, ResetPasswordData} from '@/lib';
+import {apiClient, AuthResponse, EmailLoginData, ForgotPasswordData, GetUserLoginActivitiesParams, LoginActivity, PaginatedResponse, ResetPasswordData} from '@/lib';
 
 export const authAPI = {
   emailLogin: async (data: EmailLoginData): Promise<AuthResponse> => {
@@ -23,6 +23,14 @@ export const authAPI = {
 
   refresh: async (): Promise<{ accessToken: string }> => {
     const response = await apiClient.post('/auth/refresh');
+    return response.data;
+  },
+
+  getUserLoginActivities: async (
+    userID: string,
+    params?: GetUserLoginActivitiesParams
+  ): Promise<PaginatedResponse<LoginActivity>> => {
+    const response = await apiClient.get(`/auth/users/${userID}/login-activities`, { params });
     return response.data;
   },
 

@@ -15,6 +15,9 @@ import {
   firstLetterToUpper
 } from "@/lib";
 import {AlertCircle, Mail, Phone, ShieldCheck, UserCircle2} from "lucide-react";
+import { showApiError } from "@/lib/utils/show-api-error";
+import { toast } from "sonner";
+import { AxiosError } from "axios";
 
 const providerLabelMap: Record<AuthProvider, string> = {
   [AuthProvider.GOOGLE]: "Google",
@@ -28,7 +31,6 @@ const ACTIVITY_PAGE_LIMIT = 5;
 const Settings = () => {
   const [profile, setProfile] = useState<AuthResponse['user'] | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [profileError, setProfileError] = useState<string | null>(null);
   const [activities, setActivities] = useState<LoginActivity[]>([]);
   const [activityPagination, setActivityPagination] = useState({
     page: 1,
@@ -42,12 +44,12 @@ const Settings = () => {
 
   const fetchProfile = useCallback(async () => {
     setProfileLoading(true);
-    setProfileError(null);
     try {
       const response = await authAPI.getProfile();
       setProfile(response);
-    } catch {
-      setProfileError("Unable to load profile. Please try again.");
+    } catch (error) {
+      const message = "Unable to load profile. Please try again.";
+      showApiError("load profile", error as AxiosError, message);
     } finally {
       setProfileLoading(false);
     }
@@ -57,7 +59,7 @@ const Settings = () => {
     setActivitiesLoading(true);
     setActivitiesError(null);
     try {
-      const response = await usersAPI.getUserLoginActivities(profileId, {
+      const response = await authAPI.getUserLoginActivities(profileId, {
         page,
         limit: ACTIVITY_PAGE_LIMIT,
       });
@@ -68,8 +70,10 @@ const Settings = () => {
         total: response.pagination.total,
         totalPages: response.pagination.totalPages,
       });
-    } catch {
-      setActivitiesError("Unable to load login activity.");
+    } catch (error) {
+      const message = "Unable to load login activity.";
+      setActivitiesError(message);
+      showApiError("load login activity", error as AxiosError, message);
     } finally {
       setActivitiesLoading(false);
     }
@@ -96,8 +100,10 @@ const Settings = () => {
         phone: (formData.get("phone") as string) || undefined,
       });
       fetchProfile();
-    } catch {
-      setProfileError("Failed to update profile. Please try again.");
+      toast.success("Profile updated successfully");
+    } catch (error) {
+      const message = "Failed to update profile. Please try again.";
+      showApiError("update profile", error as AxiosError, message);
     }
   };
 
@@ -143,8 +149,6 @@ const Settings = () => {
 
           {profileLoading ? (
             <ProfileSkeleton />
-          ) : profileError ? (
-            <InlineError message={profileError} onRetry={fetchProfile} />
           ) : profile ? (
             <form className="space-y-4" onSubmit={handleProfileUpdate}>
               <div>

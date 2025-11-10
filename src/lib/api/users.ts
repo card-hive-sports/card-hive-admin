@@ -26,7 +26,7 @@ export const usersAPI = {
   },
 
   updateUser: async (userID: string, data: UpdateUserData): Promise<User> => {
-    const response = await apiClient.patch(`/users/${userID}`, data);
+    const response = await apiClient.put(`/users/${userID}`, data);
     return response.data;
   },
 
@@ -47,14 +47,6 @@ export const usersAPI = {
 
   unsuspendUser: async (userID: string): Promise<User> => {
     const response = await apiClient.patch(`/users/${userID}/unsuspend`);
-    return response.data;
-  },
-
-  getUserLoginActivities: async (
-    userID: string,
-    params?: GetUserLoginActivitiesParams
-  ): Promise<PaginatedResponse<LoginActivity>> => {
-    const response = await apiClient.get(`/users/${userID}/login-activities`, { params });
     return response.data;
   },
 };
