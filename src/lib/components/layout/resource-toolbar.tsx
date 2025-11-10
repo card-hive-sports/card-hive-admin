@@ -1,6 +1,7 @@
 import {ReactNode, useEffect, useRef, useState} from "react";
 import {Search, Filter, ArrowUpDown} from "lucide-react";
 import {clsx} from "clsx";
+import {GameButton} from "@/lib/ui";
 
 interface ToolbarPopoverConfig {
   buttonLabel: string;
@@ -68,16 +69,18 @@ export const ResourceToolbar = ({
 
         {filters && (
           <div className="relative" ref={filterRef}>
-            <button
+            <GameButton
+              type="button"
+              variant="secondary"
+              className="w-full md:w-auto justify-center"
               onClick={() => {
                 setShowFilters((prev) => !prev);
                 setShowSort(false);
               }}
-              className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
             >
               {filters.buttonIcon ?? <Filter className="w-5 h-5" />}
               {filters.buttonLabel}
-            </button>
+            </GameButton>
 
             {showFilters && (
               <div
@@ -94,16 +97,18 @@ export const ResourceToolbar = ({
 
         {sort && (
           <div className="relative" ref={sortRef}>
-            <button
+            <GameButton
+              type="button"
+              variant="secondary"
+              className="w-full md:w-auto justify-center"
               onClick={() => {
                 setShowSort((prev) => !prev);
                 setShowFilters(false);
               }}
-              className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
             >
               {sort.buttonIcon ?? <ArrowUpDown className="w-5 h-5" />}
               {sort.buttonLabel}
-            </button>
+            </GameButton>
 
             {showSort && (
               <div

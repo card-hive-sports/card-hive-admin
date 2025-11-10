@@ -18,11 +18,13 @@ import {
   PageHeader,
   ResourceToolbar,
   DataTable,
-  DataTableColumn
+  DataTableColumn,
+  GameButton,
 } from "@/lib";
 import Link from "next/link";
 import { toast } from "sonner";
 import { showApiError } from "@/lib/utils/show-api-error";
+import { AxiosError } from "axios";
 
 type ActiveFiltersState = {
   status: string;
@@ -133,7 +135,7 @@ export default function Users() {
         hasPrev: response.pagination.hasPrev,
       }));
     } catch (error) {
-      showApiError('fetch users', error);
+      showApiError('fetch users', error as AxiosError);
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +180,7 @@ export default function Users() {
       setShowUserModal(false);
       toast.success("User created successfully");
     } catch (error) {
-      showApiError('create user', error);
+      showApiError('create user', error as AxiosError);
     }
   };
 
@@ -196,7 +198,7 @@ export default function Users() {
       setShowUserModal(false);
       toast.success("User updated successfully");
     } catch (error) {
-      showApiError('update user', error);
+      showApiError('update user', error as AxiosError);
     }
   };
 
@@ -207,7 +209,7 @@ export default function Users() {
       setShowDeleteModal(null);
       toast.success(isPurge ? "User permanently deleted" : "User moved to trash");
     } catch (error) {
-      showApiError(isPurge ? 'permanently delete user' : 'delete user', error);
+      showApiError(isPurge ? 'permanently delete user' : 'delete user', error as AxiosError);
     }
   };
 
@@ -218,7 +220,7 @@ export default function Users() {
       setShowDeleteModal(null);
       toast.success("User restored successfully");
     } catch (error) {
-      showApiError('restore user', error);
+      showApiError('restore user', error as AxiosError);
     }
   };
 
@@ -233,7 +235,7 @@ export default function Users() {
       }
       await fetchUsers(search);
     } catch (error) {
-      showApiError(user.isActive ? 'suspend user' : 'unsuspend user', error);
+      showApiError(user.isActive ? 'suspend user' : 'unsuspend user', error as AxiosError);
     }
   };
 
@@ -383,35 +385,36 @@ export default function Users() {
         </div>
 
         <div className="flex gap-2">
-          <Link
-            href={`/users/${user.id}`}
-            className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors text-center"
-          >
-            View
-          </Link>
-          <button
+          <GameButton asChild variant="secondary" size="sm" className="flex-1">
+            <Link href={`/users/${user.id}`} className="w-full text-center">
+              View
+            </Link>
+          </GameButton>
+          <GameButton
             type="button"
+            size="sm"
+            variant="secondary"
+            disabled={superAdmin}
             onClick={() => {
               if (superAdmin) return;
               setEditingUser(user);
               setShowUserModal(true);
             }}
-            disabled={superAdmin}
-            className={`flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors ${disabledClasses}`}
           >
             Edit
-          </button>
-          <button
+          </GameButton>
+          <GameButton
             type="button"
+            size="sm"
+            variant="danger"
+            disabled={superAdmin}
             onClick={() => {
               if (superAdmin) return;
               setShowDeleteModal(user);
             }}
-            disabled={superAdmin}
-            className={`flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-semibold py-2 px-3 rounded-lg transition-colors ${disabledClasses}`}
           >
             Delete
-          </button>
+          </GameButton>
         </div>
       </>
     );
@@ -450,15 +453,16 @@ export default function Users() {
         </div>
         <p className="text-white/40 text-xs mt-2">Filter by created date.</p>
       </div>
-      <button
+      <GameButton
+        size="sm"
+        className="w-full"
         onClick={() => {
           handleApplyFilters();
           close();
         }}
-        className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
       >
         Apply Filters
-      </button>
+      </GameButton>
     </div>
   );
 
@@ -486,47 +490,46 @@ export default function Users() {
       <div>
         <label className="block text-white/70 text-sm font-medium mb-2">Order</label>
         <div className="flex gap-2">
-          <button
+          <GameButton
+            type="button"
+            size="sm"
+            variant={sortDraft.sortOrder === SORT_ORDER.ASC ? "primary" : "secondary"}
+            className="flex-1"
             onClick={() =>
               setSortDraft((prev) => ({
                 ...prev,
                 sortOrder: SORT_ORDER.ASC,
               }))
             }
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
-              sortDraft.sortOrder === SORT_ORDER.ASC
-                ? "bg-[#CEFE10] text-black"
-                : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
-            }`}
           >
             Asc
-          </button>
-          <button
+          </GameButton>
+          <GameButton
+            type="button"
+            size="sm"
+            variant={sortDraft.sortOrder === SORT_ORDER.DESC ? "primary" : "secondary"}
+            className="flex-1"
             onClick={() =>
               setSortDraft((prev) => ({
                 ...prev,
                 sortOrder: SORT_ORDER.DESC,
               }))
             }
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
-              sortDraft.sortOrder === SORT_ORDER.DESC
-                ? "bg-[#CEFE10] text-black"
-                : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
-            }`}
           >
             Desc
-          </button>
+          </GameButton>
         </div>
       </div>
-      <button
+      <GameButton
+        size="sm"
+        className="w-full"
         onClick={() => {
           handleApplySort();
           close();
         }}
-        className="w-full bg-[#CEFE10] hover:bg-[#b8e80d] text-black text-sm font-semibold py-2 px-3 rounded-lg transition-colors cursor-pointer"
       >
         Apply Sort
-      </button>
+      </GameButton>
     </div>
   );
 
@@ -538,16 +541,17 @@ export default function Users() {
           title="Users"
           subtitle="Manage platform users and their accounts"
           actions={
-            <button
+            <GameButton
+              size="md"
+              className="w-full md:w-auto justify-center gap-2"
               onClick={() => {
                 setEditingUser(null);
                 setShowUserModal(true);
               }}
-              className="flex items-center gap-2 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center cursor-pointer"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               New User
-            </button>
+            </GameButton>
           }
         />
 

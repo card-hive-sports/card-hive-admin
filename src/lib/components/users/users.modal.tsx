@@ -1,6 +1,7 @@
 import {FormEvent, useState, useEffect} from "react";
 import { X } from "lucide-react";
 import {User, UserFormData, UserRole} from "@/lib";
+import {GameButton} from "@/lib/ui";
 
 interface UserModalProps {
   isOpen: boolean;
@@ -131,19 +132,12 @@ export const UserModal = ({ isOpen, onClose, onSubmit, initialData, title }: Use
             )}
 
             <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
-              >
+              <GameButton type="button" variant="secondary" className="flex-1" onClick={onClose}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
-              >
+              </GameButton>
+              <GameButton type="submit" className="flex-1">
                 {initialData ? "Update" : "Create"}
-              </button>
+              </GameButton>
             </div>
           </form>
         </div>

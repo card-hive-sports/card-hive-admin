@@ -12,7 +12,8 @@ import {
   SkeletonText,
   usersAPI,
   Pagination,
-  firstLetterToUpper
+  firstLetterToUpper,
+  GameButton,
 } from "@/lib";
 import {AlertCircle, Mail, Phone, ShieldCheck, UserCircle2} from "lucide-react";
 import { showApiError } from "@/lib/utils/show-api-error";
@@ -197,19 +198,12 @@ const Settings = () => {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
-                >
+                <GameButton type="submit" className="flex-1">
                   Save Changes
-                </button>
-                <button
-                  type="button"
-                  onClick={fetchProfile}
-                  className="flex-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
-                >
+                </GameButton>
+                <GameButton type="button" variant="secondary" className="flex-1" onClick={fetchProfile}>
                   Reset
-                </button>
+                </GameButton>
               </div>
             </form>
           ) : null}
