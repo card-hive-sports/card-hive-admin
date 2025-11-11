@@ -126,7 +126,7 @@ const Layout: FC<LayoutProps> = ({ children }) => {
 
       <main className="flex-1 md:ml-64 flex flex-col">
         <header className="bg-gradient-to-r from-black/40 to-black/20 backdrop-blur-md border-b border-white/10 p-4 md:p-6 flex items-center justify-between sticky top-0 z-30">
-          <h1 className="text-white font-bold text-xl md:text-2xl">Card Hive Admin</h1>
+          <h1 className="text-white font-bold text-2xl md:text-3xl">Admin Dashboard</h1>
 
           <div className="flex items-center gap-4">
             <button

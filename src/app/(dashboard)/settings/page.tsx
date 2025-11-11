@@ -143,7 +143,7 @@ const Settings = () => {
               <UserCircle2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-white text-lg font-semibold">Profile Details</h3>
+              <h3 className="text-white text-lg font-semibold">Profile</h3>
               <p className="text-white/60 text-sm">Update your personal information</p>
             </div>
           </div>
