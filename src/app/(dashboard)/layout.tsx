@@ -2,7 +2,7 @@
 
 import {FC, ReactNode, useEffect, useRef, useState} from "react";
 import Link from "next/link";
-import {Menu, X, LayoutDashboard, LogOut, Settings, Users} from "lucide-react";
+import {Menu, X, LayoutDashboard, LogOut, Settings, Users, Package, Layers} from "lucide-react";
 import {usePathname, useRouter} from "next/navigation";
 import {authAPI, useAuth, GameButton} from "@/lib";
 import Image from "next/image";
@@ -37,7 +37,9 @@ const Layout: FC<LayoutProps> = ({ children }) => {
 
   const menuItems = [
     { name: "Home", path: "/home", icon: LayoutDashboard },
-      { name: "Users", path: "/users", icon: Users },
+    { name: "Users", path: "/users", icon: Users },
+    { name: "Packs", path: "/packs", icon: Package },
+    { name: "Cards", path: "/cards", icon: Layers },
   ];
 
   const isActive = (path: string) => pathname === path;
