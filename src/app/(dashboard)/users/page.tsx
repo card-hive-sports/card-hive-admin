@@ -1,7 +1,7 @@
 'use client'
 
 import {useState, useEffect, useCallback} from "react";
-import { Plus, Edit2, Trash2, AlertCircle, Eye } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 import {
   UserFormData,
   UserModal,
@@ -19,12 +19,14 @@ import {
   ResourceToolbar,
   DataTable,
   DataTableColumn,
+  DataTableMobileCardLayout,
   GameButton,
 } from "@/lib";
 import Link from "next/link";
 import { toast } from "sonner";
 import { showApiError } from "@/lib/utils/show-api-error";
 import { AxiosError } from "axios";
+import { useRouter } from "next/navigation";
 
 type ActiveFiltersState = {
   status: string;
@@ -48,6 +50,8 @@ const initialFiltersState = (): ActiveFiltersState => ({
 });
 
 export default function Users() {
+  const router = useRouter();
+
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 400);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -296,15 +300,19 @@ export default function Users() {
 
         return (
           <div className="flex items-center justify-end gap-2">
-            <Link
-              href={`/users/${user.id}`}
+            <GameButton
+              variant="secondary"
+              onClick={() => {
+                router.push(`/users/${user.id}`);
+              }}
               className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors"
               title="View"
             >
-              <Eye className="w-4 h-4" />
-            </Link>
-            <button
+              VIEW
+            </GameButton>
+            <GameButton
               type="button"
+              variant="secondary"
               onClick={() => {
                 if (superAdmin) return;
                 setEditingUser(user);
@@ -314,16 +322,17 @@ export default function Users() {
               className={`p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
               title={superAdmin ? "Action disabled for Super Admin" : "Edit"}
             >
-              <Edit2 className="w-4 h-4" />
-            </button>
-            <button
+              EDIT
+            </GameButton>
+            <GameButton
               type="button"
+              variant="secondary"
               onClick={() => {
                 if (superAdmin) return;
                 handleSuspendUser(user);
               }}
               disabled={superAdmin}
-              className={`p-2 text-white/70 hover:text-yellow-400 hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
+              className={`p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
               title={
                 superAdmin
                   ? "Action disabled for Super Admin"
@@ -332,20 +341,23 @@ export default function Users() {
                   : "Unsuspend"
               }
             >
-              <AlertCircle className="w-4 h-4" />
-            </button>
-            <button
+              {user.isActive
+                  ? "Suspend"
+                  : "Unsuspend"}
+            </GameButton>
+            <GameButton
               type="button"
+              variant="danger"
               onClick={() => {
                 if (superAdmin) return;
                 setShowDeleteModal(user);
               }}
               disabled={superAdmin}
-              className={`p-2 text-white/70 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
+              className={`p-2 text-white/70 hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
               title={superAdmin ? "Action disabled for Super Admin" : "Delete"}
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              DELETE
+            </GameButton>
           </div>
         );
       },
@@ -357,65 +369,73 @@ export default function Users() {
   const renderUserMobileCard = (user: User) => {
     const status = computeStatus(user);
     const superAdmin = isSuperAdmin(user);
+    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+
+    const actionButtons = (
+      <div className="flex flex-wrap gap-2 w-full">
+        <GameButton asChild variant="secondary" size="sm" className="flex-1 normal-case px-3 py-2">
+          <Link href={`/users/${user.id}`} className="w-full text-center">
+            View
+          </Link>
+        </GameButton>
+        <GameButton
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={superAdmin}
+          onClick={() => {
+            if (superAdmin) return;
+            setEditingUser(user);
+            setShowUserModal(true);
+          }}
+        >
+         &nbsp; Edit &nbsp;
+        </GameButton>
+        <GameButton
+          size="sm"
+          variant="danger"
+          disabled={superAdmin}
+          onClick={() => {
+            if (superAdmin) return;
+            setShowDeleteModal(user);
+          }}
+        >
+          Delete
+        </GameButton>
+      </div>
+    );
+
     return (
-      <>
-        <div className="mb-4">
-          <h3 className="text-white font-bold text-lg mb-2">{user.fullName}</h3>
-          <p className="text-white/60 text-sm mb-3">{user.email ?? "-"}</p>
-
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-              <p className="text-white/50 text-xs">Wallet</p>
-              <p className="text-white font-semibold">
-                {formatCurrency(Number(user.walletBalance))}
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-              <p className="text-white/50 text-xs">Cards</p>
-              <p className="text-white font-semibold">{user.cardsOwned}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-              <p className="text-white/50 text-xs">Status</p>
-              <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+      <DataTableMobileCardLayout
+        title={user.fullName}
+        subtitle={user.email ?? "-"}
+        badge={{ label: statusLabel, className: getStatusColor(status) }}
+        fields={[
+          {
+            id: `wallet-${user.id}`,
+            label: "Wallet",
+            value: formatCurrency(Number(user.walletBalance)),
+          },
+          {
+            id: `cards-${user.id}`,
+            label: "Cards",
+            value: user.cardsOwned,
+          },
+          {
+            id: `status-field-${user.id}`,
+            label: "Status",
+            value: (
+              <span
+                className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}
+              >
+                {statusLabel}
               </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <GameButton asChild variant="secondary" size="sm" className="flex-1">
-            <Link href={`/users/${user.id}`} className="w-full text-center">
-              View
-            </Link>
-          </GameButton>
-          <GameButton
-            type="button"
-            size="sm"
-            variant="secondary"
-            disabled={superAdmin}
-            onClick={() => {
-              if (superAdmin) return;
-              setEditingUser(user);
-              setShowUserModal(true);
-            }}
-          >
-            Edit
-          </GameButton>
-          <GameButton
-            type="button"
-            size="sm"
-            variant="danger"
-            disabled={superAdmin}
-            onClick={() => {
-              if (superAdmin) return;
-              setShowDeleteModal(user);
-            }}
-          >
-            Delete
-          </GameButton>
-        </div>
-      </>
+            ),
+            span: 2,
+          },
+        ]}
+        actions={actionButtons}
+      />
     );
   };
 

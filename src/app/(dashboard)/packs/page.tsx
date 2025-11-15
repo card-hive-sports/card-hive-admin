@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { PackModal } from "@/lib";
+import {
+  PackModal,
+  DataTable,
+  DataTableColumn,
+  DataTableMobileCardLayout,
+  Pagination,
+} from "@/lib";
 import { Search, Plus, Filter, ArrowUpDown, Edit2, Trash2, Eye } from "lucide-react";
 import { GameButton } from "@/lib/ui";
 import {
@@ -35,6 +41,8 @@ const formatCurrency = (value?: string) => {
   if (!value || Number.isNaN(Number(value))) return "-";
   return `$${Number(value).toFixed(2)}`;
 };
+
+const PACKS_PER_PAGE = 5;
 
 const INITIAL_PACKS: Pack[] = [
   {
@@ -121,6 +129,22 @@ export default function Packs() {
     sportType: "",
     isActive: "",
   });
+  const [page, setPage] = useState(1);
+
+  const handleFilterChange = (key: PackFilterKey, value: string) => {
+    setActiveFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
+  };
+
+  const handleSortByChange = (value: "packType" | "createdAt" | "price" | "cards") => {
+    setSortBy(value);
+    setPage(1);
+  };
+
+  const handleSortOrderChange = (value: "asc" | "desc") => {
+    setSortOrder(value);
+    setPage(1);
+  };
 
   const filteredAndSortedPacks = useMemo(() => {
     let result = [...packs];
@@ -168,6 +192,14 @@ export default function Packs() {
     return result;
   }, [packs, search, activeFilters, sortBy, sortOrder]);
 
+  const totalItems = filteredAndSortedPacks.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PACKS_PER_PAGE));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const paginatedPacks = filteredAndSortedPacks.slice(
+    (currentPage - 1) * PACKS_PER_PAGE,
+    currentPage * PACKS_PER_PAGE
+  );
+
   const handleCreatePack = (formData: PackFormData) => {
     const timestamp = new Date().toISOString();
     const newPack: Pack = {
@@ -197,6 +229,146 @@ export default function Packs() {
   const handleDeletePack = (pack: Pack) => {
     setPacks(packs.filter((p) => p.id !== pack.id));
     setShowDeleteModal(null);
+    setPage(1);
+  };
+
+  const packColumns: DataTableColumn<Pack>[] = [
+    {
+      id: "pack",
+      header: "Pack",
+      cell: (pack) => (
+        <div>
+          <p className="text-white font-semibold">{packTypeLabels[pack.packType]}</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">
+            {sportTypeLabels[pack.sportType]}
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "price",
+      header: "Price",
+      cell: (pack) => <p className="text-white font-semibold">{formatCurrency(pack.price)}</p>,
+    },
+    {
+      id: "cards",
+      header: "Cards",
+      cell: (pack) => <p className="text-white font-semibold">{pack.cards}</p>,
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (pack) => (
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+            pack.isActive ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
+          }`}
+        >
+          {pack.isActive ? "Active" : "Inactive"}
+        </span>
+      ),
+    },
+    {
+      id: "created",
+      header: "Created",
+      cell: (pack) => <p className="text-white/70 text-sm">{pack.createdAt}</p>,
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      align: "right",
+      cell: (pack) => (
+        <div className="flex items-center justify-end gap-2">
+          <GameButton asChild variant="secondary" className="p-2 hover:text-[#CEFE10] normal-case">
+            <Link href={`/packs/${pack.id}`} className="flex items-center gap-1">
+              View
+            </Link>
+          </GameButton>
+          <GameButton
+            variant="secondary"
+            className="p-2 hover:text-[#CEFE10] normal-case"
+            onClick={() => {
+              setEditingPack(pack);
+              setShowPackModal(true);
+            }}
+          >
+            Edit
+          </GameButton>
+          <GameButton
+            variant="danger"
+            className="p-2 normal-case"
+            onClick={() => setShowDeleteModal(pack)}
+          >
+            Delete
+          </GameButton>
+        </div>
+      ),
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+    },
+  ];
+
+  const renderPackMobileCard = (pack: Pack) => {
+    const statusLabel = pack.isActive ? "Active" : "Inactive";
+
+    const actionButtons = (
+      <div className="flex flex-wrap gap-2 w-full">
+        <GameButton asChild variant="secondary" size="sm" className="flex-1 normal-case px-3 py-2">
+          <Link href={`/packs/${pack.id}`} className="flex items-center justify-center gap-1">
+            View
+          </Link>
+        </GameButton>
+        <GameButton
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            setEditingPack(pack);
+            setShowPackModal(true);
+          }}
+        >
+          &nbsp; Edit &nbsp;
+        </GameButton>
+        <GameButton
+          size="sm"
+          variant="danger"
+          onClick={() => setShowDeleteModal(pack)}
+        >
+          Delete
+        </GameButton>
+      </div>
+    );
+
+    return (
+      <DataTableMobileCardLayout
+        title={packTypeLabels[pack.packType]}
+        subtitle={sportTypeLabels[pack.sportType]}
+        badge={{
+          label: statusLabel,
+          className: pack.isActive
+            ? "bg-green-500/20 text-green-400"
+            : "bg-yellow-500/20 text-yellow-300",
+        }}
+        fields={[
+          {
+            id: `price-${pack.id}`,
+            label: "Price",
+            value: formatCurrency(pack.price),
+          },
+          {
+            id: `cards-${pack.id}`,
+            label: "Cards",
+            value: pack.cards,
+          },
+          {
+            id: `sport-${pack.id}`,
+            label: "Sport",
+            value: sportTypeLabels[pack.sportType],
+            span: 2,
+          },
+        ]}
+        actions={actionButtons}
+      />
+    );
   };
 
   return (
@@ -230,7 +402,10 @@ export default function Packs() {
                 type="text"
                 placeholder="Search packs by type, sport, or price..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 className="w-full bg-black/30 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
               />
             </div>
@@ -252,7 +427,7 @@ export default function Packs() {
                     <label className="block text-white/70 text-sm font-medium mb-2">Pack Type</label>
                     <select
                       value={activeFilters.packType || ""}
-                      onChange={(e) => setActiveFilters({ ...activeFilters, packType: e.target.value })}
+                      onChange={(e) => handleFilterChange("packType", e.target.value)}
                       className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
                     >
                       <option value="">All Pack Types</option>
@@ -268,7 +443,7 @@ export default function Packs() {
                     <label className="block text-white/70 text-sm font-medium mb-2">Sport</label>
                     <select
                       value={activeFilters.sportType || ""}
-                      onChange={(e) => setActiveFilters({ ...activeFilters, sportType: e.target.value })}
+                      onChange={(e) => handleFilterChange("sportType", e.target.value)}
                       className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
                     >
                       <option value="">All Sports</option>
@@ -284,7 +459,7 @@ export default function Packs() {
                     <label className="block text-white/70 text-sm font-medium mb-2">Status</label>
                     <select
                       value={activeFilters.isActive || ""}
-                      onChange={(e) => setActiveFilters({ ...activeFilters, isActive: e.target.value })}
+                      onChange={(e) => handleFilterChange("isActive", e.target.value)}
                       className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
                     >
                       <option value="">All Status</option>
@@ -298,13 +473,14 @@ export default function Packs() {
                       variant="ghost"
                       size="sm"
                       className="w-full justify-center text-xs"
-                      onClick={() =>
+                      onClick={() => {
                         setActiveFilters({
                           packType: "",
                           sportType: "",
                           isActive: "",
-                        })
-                      }
+                        });
+                        setPage(1);
+                      }}
                     >
                       Clear Filters
                     </GameButton>
@@ -331,7 +507,7 @@ export default function Packs() {
                     <select
                       value={sortBy}
                       onChange={(e) =>
-                        setSortBy(e.target.value as "packType" | "createdAt" | "price" | "cards")
+                        handleSortByChange(e.target.value as "packType" | "createdAt" | "price" | "cards")
                       }
                       className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
                     >
@@ -349,7 +525,7 @@ export default function Packs() {
                         size="sm"
                         variant={sortOrder === "asc" ? "primary" : "ghost"}
                         className="flex-1"
-                        onClick={() => setSortOrder("asc")}
+                        onClick={() => handleSortOrderChange("asc")}
                       >
                         Asc
                       </GameButton>
@@ -357,7 +533,7 @@ export default function Packs() {
                         size="sm"
                         variant={sortOrder === "desc" ? "primary" : "ghost"}
                         className="flex-1"
-                        onClick={() => setSortOrder("desc")}
+                        onClick={() => handleSortOrderChange("desc")}
                       >
                         Desc
                       </GameButton>
@@ -369,152 +545,28 @@ export default function Packs() {
           </div>
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden md:block glass rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Pack</th>
-                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Price</th>
-                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Cards</th>
-                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Status</th>
-                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Created</th>
-                  <th className="text-right px-6 py-4 text-white/70 font-semibold text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAndSortedPacks.map((pack) => (
-                  <tr key={pack.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="text-white font-semibold">{packTypeLabels[pack.packType]}</p>
-                      <p className="text-xs uppercase tracking-[0.3em] text-white/50">{sportTypeLabels[pack.sportType]}</p>
-                    </td>
-                    <td className="px-6 py-4 text-white font-semibold">{formatCurrency(pack.price)}</td>
-                    <td className="px-6 py-4 text-white font-semibold">{pack.cards}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        pack.isActive ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
-                      }`}>
-                        {pack.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-white/70 text-sm">{pack.createdAt}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <GameButton
-                          asChild
-                          size="sm"
-                          variant="ghost"
-                          className="px-3 py-1 normal-case"
-                        >
-                          <Link href={`/packs/${pack.id}`} className="flex items-center gap-1">
-                            <Eye className="w-4 h-4" />
-                            View
-                          </Link>
-                        </GameButton>
-                        <GameButton
-                          size="sm"
-                          variant="secondary"
-                          className="px-3 py-1 normal-case"
-                          onClick={() => {
-                            setEditingPack(pack);
-                            setShowPackModal(true);
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                          Edit
-                        </GameButton>
-                        <GameButton
-                          size="sm"
-                          variant="danger"
-                          className="px-3 py-1 normal-case"
-                          onClick={() => setShowDeleteModal(pack)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </GameButton>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-4">
-          {filteredAndSortedPacks.map((pack) => (
-            <div key={pack.id} className="glass p-4 rounded-2xl space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-white text-lg font-semibold">{packTypeLabels[pack.packType]}</p>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/60">
-                    {sportTypeLabels[pack.sportType]}
-                  </p>
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    pack.isActive ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-300"
-                  }`}
-                >
-                  {pack.isActive ? "Active" : "Inactive"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-white/70 text-sm">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.35em] text-white/50">Price</p>
-                  <p className="text-white font-semibold">{formatCurrency(pack.price)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.35em] text-white/50">Cards</p>
-                  <p className="text-white font-semibold">{pack.cards}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-[10px] uppercase tracking-[0.35em] text-white/50">Sport</p>
-                  <p className="text-white font-semibold">{sportTypeLabels[pack.sportType]}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <GameButton
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 normal-case px-3 py-2"
-                >
-                  <Link href={`/packs/${pack.id}`} className="flex items-center justify-center gap-1">
-                    <Eye className="w-4 h-4" />
-                    View
-                  </Link>
-                </GameButton>
-                <GameButton
-                  size="sm"
-                  variant="secondary"
-                  className="flex-1 normal-case px-3 py-2"
-                  onClick={() => {
-                    setEditingPack(pack);
-                    setShowPackModal(true);
-                  }}
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Edit
-                </GameButton>
-                <GameButton
-                  size="sm"
-                  variant="danger"
-                  className="flex-1 normal-case px-3 py-2"
-                  onClick={() => setShowDeleteModal(pack)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </GameButton>
-              </div>
+        <DataTable<Pack>
+          data={paginatedPacks}
+          columns={packColumns}
+          keyExtractor={(pack) => pack.id}
+          renderMobileCard={(pack) => renderPackMobileCard(pack)}
+          emptyState={
+            <div className="glass rounded-2xl p-6 text-center text-white/70">
+              No packs match the current filters.
             </div>
-          ))}
-        </div>
+          }
+        />
+
+        {totalPages > 1 && (
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={PACKS_PER_PAGE}
+            onPageChange={setPage}
+            className="mt-4"
+          />
+        )}
       </div>
 
       {/* Modals */}
