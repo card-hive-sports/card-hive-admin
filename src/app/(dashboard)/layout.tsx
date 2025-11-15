@@ -34,6 +34,10 @@ const Layout: FC<LayoutProps> = ({ children }) => {
   };
 
   const initials = getInitials(user?.fullName ?? undefined);
+  const profileCutSize = 24;
+  const profileClipPath = `polygon(0 0%, 100% 0%, 100% calc(100% - ${profileCutSize}px), calc(100% - ${profileCutSize}px) 100%, 0% 100%)`;
+  const profileAccentCutSize = 20;
+  const profileAccentClipPath = `polygon(100% 0%, 100% calc(100% - ${profileAccentCutSize}px), calc(100% - ${profileAccentCutSize}px) 100%, 0% 100%)`;
 
   const menuItems = [
     { name: "Home", path: "/home", icon: LayoutDashboard },
@@ -155,26 +159,43 @@ const Layout: FC<LayoutProps> = ({ children }) => {
             </button>
 
             <div className="relative" ref={profileRef}>
-            <button
-              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-              className="w-10 h-10 rounded-full bg-[#CEFE10] text-black font-bold flex items-center justify-center hover:bg-[#b8e80d] transition-colors duration-200 cursor-pointer"
-            >
-              {user?.avatarUrl ? (
-                <span className="relative inline-flex h-full w-full overflow-hidden rounded-full">
-                  <Image
-                    src={user.avatarUrl}
-                    alt={`${user.fullName}'s avatar`}
-                    fill
-                    sizes="40px"
-                    className="object-cover"
-                    unoptimized
-                  />
-                </span>
-              ) : (
-                initials
-              )}
-            </button>
-
+              <button
+                type="button"
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                style={{ clipPath: profileClipPath }}
+                className="relative flex items-center gap-3 rounded-2xl border border-white/20 bg-black/40 px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CEFE10]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black cursor-pointer"
+              >
+                <div
+                  className={`relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-white/20 ${
+                    user?.avatarUrl ? "bg-black/30" : "bg-gradient-to-br from-[#CEFE10] via-[#b8ff2a] to-[#9CD80D]"
+                  }`}
+                >
+                  {user?.avatarUrl ? (
+                    <Image
+                      src={user.avatarUrl}
+                      alt={`${user.fullName ?? "Profile"} avatar`}
+                      fill
+                      sizes="48px"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <span className="text-base font-bold text-black">{initials}</span>
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-white">
+                    {user?.fullName ?? "Admin"}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.3em] text-white/60">
+                    Profile
+                  </span>
+                </div>
+                <span
+                  className="pointer-events-none absolute bottom-0 right-0 h-6 w-6 bg-white/10 border border-white/20"
+                  style={{ clipPath: profileAccentClipPath }}
+                />
+              </button>
               {profileDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 glass-dark rounded-lg shadow-lg overflow-hidden z-50">
                   <Link

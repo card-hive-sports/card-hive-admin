@@ -1,68 +1,110 @@
 'use client'
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { PackModal } from "@/lib";
-import { Search, Plus, Filter, ArrowUpDown, Edit2, Trash2, Eye, Star } from "lucide-react";
+import { Search, Plus, Filter, ArrowUpDown, Edit2, Trash2, Eye } from "lucide-react";
+import { GameButton } from "@/lib/ui";
+import {
+  PACK_TYPE_OPTIONS,
+  SPORT_TYPE_OPTIONS,
+  type Pack,
+  type PackFormData,
+  type PackType,
+  type SportType,
+} from "@/lib/types/pack";
 
-interface Pack {
-  id: string;
-  name: string;
-  theme: string;
-  rarity: "Common" | "Uncommon" | "Rare" | "Epic" | "Legend" | "Grail" | "Lineup" | "Chase";
-  cardCount: number;
-  status: "draft" | "published";
-  createdAt: string;
-  releaseDate: string;
-  tags: string[];
-}
+const packTypeLabels: Record<PackType, string> = {
+  DRAFT: "Draft",
+  PRO: "Pro",
+  ALL_STARS: "All Stars",
+  HALL_OF_FAME: "Hall of Fame",
+  LEGENDS: "Legends",
+};
+
+const sportTypeLabels: Record<SportType, string> = {
+  FOOTBALL: "Football",
+  BASEBALL: "Baseball",
+  BASKETBALL: "Basketball",
+  MULTISPORT: "Multisport",
+};
+
+type PackFilterKey = "packType" | "sportType" | "isActive";
+
+const formatCurrency = (value?: string) => {
+  if (!value || Number.isNaN(Number(value))) return "-";
+  return `$${Number(value).toFixed(2)}`;
+};
 
 const INITIAL_PACKS: Pack[] = [
   {
-    id: "1",
-    name: "Golden Era Basketball",
-    theme: "Basketball",
-    rarity: "Legend",
-    cardCount: 50,
-    status: "published",
-    createdAt: "2024-01-15",
-    releaseDate: "2024-02-01",
-    tags: ["basketball", "vintage", "iconic"],
+    id: "pack-1",
+    name: "Legends of the Gridiron",
+    packType: "LEGENDS",
+    sportType: "FOOTBALL",
+    description: "High-end football talent with a focus on legendary rookies and veterans.",
+    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
+    bannerUrl: "https://images.unsplash.com/photo-1505842465776-3d8f0d5f4f6a",
+    price: "79.99",
+    cards: 32,
+    isActive: true,
+    createdAt: "2024-01-02",
+    updatedAt: "2024-01-15",
   },
   {
-    id: "2",
-    name: "Modern Athletes",
-    theme: "Contemporary Sports",
-    rarity: "Rare",
-    cardCount: 75,
-    status: "published",
+    id: "pack-2",
+    name: "All-Star Sluggers",
+    packType: "ALL_STARS",
+    sportType: "BASEBALL",
+    description: "A curated mix of baseball greats and rising stars.",
+    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
+    bannerUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+    price: "59.50",
+    cards: 28,
+    isActive: true,
     createdAt: "2024-01-10",
-    releaseDate: "2024-02-15",
-    tags: ["modern", "sports", "trending"],
+    updatedAt: "2024-02-12",
   },
   {
-    id: "3",
-    name: "Rookie Edition",
-    theme: "New Players",
-    rarity: "Uncommon",
-    cardCount: 100,
-    status: "draft",
-    createdAt: "2024-01-20",
-    releaseDate: "2024-03-01",
-    tags: ["rookies", "upcoming", "draft"],
+    id: "pack-3",
+    name: "Pro Court Collection",
+    packType: "PRO",
+    sportType: "BASKETBALL",
+    description: "Modern basketball legends with premium parallels.",
+    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
+    bannerUrl: "https://images.unsplash.com/photo-1505842465776-3d8f0d5f4f6a",
+    price: "69.00",
+    cards: 18,
+    isActive: false,
+    createdAt: "2024-01-18",
+    updatedAt: "2024-01-22",
   },
   {
-    id: "4",
-    name: "Championship Moments",
-    theme: "Historic Wins",
-    rarity: "Epic",
-    cardCount: 40,
-    status: "published",
-    createdAt: "2024-01-05",
-    releaseDate: "2024-01-25",
-    tags: ["championship", "historic", "memorable"],
+    id: "pack-4",
+    name: "Multisport Draft",
+    packType: "DRAFT",
+    sportType: "MULTISPORT",
+    description: "Early releases covering the next generation across sports.",
+    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
+    bannerUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+    price: "39.99",
+    cards: 12,
+    isActive: true,
+    createdAt: "2024-02-01",
+    updatedAt: "2024-02-02",
   },
 ];
+
+const packToFormData = (pack: Pack): PackFormData => ({
+  name: pack.name ?? "",
+  packType: pack.packType,
+  sportType: pack.sportType,
+  description: pack.description,
+  imageUrl: pack.imageUrl,
+  bannerUrl: pack.bannerUrl,
+  price: pack.price,
+  isActive: pack.isActive,
+});
 
 export default function Packs() {
   const [packs, setPacks] = useState<Pack[]>(INITIAL_PACKS);
@@ -72,35 +114,51 @@ export default function Packs() {
   const [showDeleteModal, setShowDeleteModal] = useState<Pack | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
-  const [sortBy, setSortBy] = useState<"name" | "createdAt" | "cardCount">("name");
+  const [sortBy, setSortBy] = useState<"packType" | "createdAt" | "price" | "cards">("packType");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({ rarity: "", status: "" });
+  const [activeFilters, setActiveFilters] = useState<Record<PackFilterKey, string>>({
+    packType: "",
+    sportType: "",
+    isActive: "",
+  });
 
   const filteredAndSortedPacks = useMemo(() => {
-    let result = packs;
+    let result = [...packs];
+    const query = search.trim().toLowerCase();
 
-    if (search) {
-      result = result.filter((pack) =>
-        pack.name.toLowerCase().includes(search.toLowerCase()) ||
-        pack.theme.toLowerCase().includes(search.toLowerCase()) ||
-        pack.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase()))
-      );
+    if (query) {
+      result = result.filter((pack) => {
+        const descriptionMatch = pack.description?.toLowerCase().includes(query);
+        const packTypeMatch = packTypeLabels[pack.packType].toLowerCase().includes(query);
+        const sportMatch = sportTypeLabels[pack.sportType].toLowerCase().includes(query);
+        return (
+          descriptionMatch ||
+          packTypeMatch ||
+          sportMatch ||
+          pack.price.toLowerCase().includes(query)
+        );
+      });
     }
 
-    Object.entries(activeFilters).forEach(([key, value]) => {
-      if (value) {
-        result = result.filter((pack) => (pack as any)[key] === value);
+    (Object.entries(activeFilters) as [PackFilterKey, string][]).forEach(([key, value]) => {
+      if (!value) return;
+      if (key === "isActive") {
+        result = result.filter((pack) => String(pack.isActive) === value);
+        return;
       }
+      result = result.filter((pack) => pack[key] === value);
     });
 
-    result.sort((a, b) => {
-      let aVal: any = a[sortBy];
-      let bVal: any = b[sortBy];
+    const getSortValue = (pack: Pack) => {
+      if (sortBy === "price") return Number(pack.price) || 0;
+      if (sortBy === "cards") return pack.cards;
+      if (sortBy === "createdAt") return new Date(pack.createdAt).getTime();
+      return packTypeLabels[pack.packType].toLowerCase();
+    };
 
-      if (typeof aVal === "string") {
-        aVal = aVal.toLowerCase();
-        bVal = bVal.toLowerCase();
-      }
+    result.sort((a, b) => {
+      const aVal = getSortValue(a);
+      const bVal = getSortValue(b);
 
       if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
       if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
@@ -110,20 +168,28 @@ export default function Packs() {
     return result;
   }, [packs, search, activeFilters, sortBy, sortOrder]);
 
-  const handleCreatePack = (formData: any) => {
+  const handleCreatePack = (formData: PackFormData) => {
+    const timestamp = new Date().toISOString();
     const newPack: Pack = {
       id: Math.random().toString(36).substr(2, 9),
       ...formData,
-      createdAt: new Date().toISOString().split("T")[0],
-      cardCount: 0,
+      cards: 0,
+      createdAt: timestamp,
+      updatedAt: timestamp,
     };
-    setPacks([...packs, newPack]);
+    setPacks((prev) => [...prev, newPack]);
     setShowPackModal(false);
   };
 
-  const handleEditPack = (formData: any) => {
+  const handleEditPack = (formData: PackFormData) => {
     if (!editingPack) return;
-    setPacks(packs.map((p) => (p.id === editingPack.id ? { ...p, ...formData } : p)));
+    setPacks((prev) =>
+      prev.map((pack) =>
+        pack.id === editingPack.id
+          ? { ...pack, ...formData, updatedAt: new Date().toISOString() }
+          : pack
+      )
+    );
     setEditingPack(null);
     setShowPackModal(false);
   };
@@ -131,20 +197,6 @@ export default function Packs() {
   const handleDeletePack = (pack: Pack) => {
     setPacks(packs.filter((p) => p.id !== pack.id));
     setShowDeleteModal(null);
-  };
-
-  const getRarityColor = (rarity: string) => {
-    const colors: Record<string, string> = {
-      common: "bg-gray-500/20 text-gray-400",
-      uncommon: "bg-green-500/20 text-green-400",
-      rare: "bg-blue-500/20 text-blue-400",
-      epic: "bg-purple-500/20 text-purple-400",
-      legend: "bg-yellow-500/20 text-yellow-400",
-      grail: "bg-[#CEFE10]/20 text-[#CEFE10]",
-      lineup: "bg-orange-500/20 text-orange-400",
-      chase: "bg-cyan-500/20 text-cyan-400",
-    };
-    return colors[rarity.toLowerCase()] || colors.common;
   };
 
   return (
@@ -156,16 +208,16 @@ export default function Packs() {
             <h2 className="text-white text-3xl font-bold mb-2">Card Packs</h2>
             <p className="text-white/60">Manage card packs and their content</p>
           </div>
-          <button
+          <GameButton
             onClick={() => {
               setEditingPack(null);
               setShowPackModal(true);
             }}
-            className="flex items-center gap-2 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center"
+            className="w-full md:w-auto justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
             New Pack
-          </button>
+          </GameButton>
         </div>
 
         {/* Search and Controls */}
@@ -176,7 +228,7 @@ export default function Packs() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
               <input
                 type="text"
-                placeholder="Search packs by name, theme, or tags..."
+                placeholder="Search packs by type, sport, or price..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-black/30 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
@@ -185,55 +237,77 @@ export default function Packs() {
 
             {/* Filter Button */}
             <div className="relative">
-              <button
+              <GameButton
+                variant="secondary"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center"
+                className="w-full md:w-auto justify-center gap-2"
               >
                 <Filter className="w-5 h-5" />
                 Filters
-              </button>
+              </GameButton>
 
               {showFilters && (
                 <div className="absolute top-full right-0 mt-2 w-72 glass rounded-lg p-4 z-50 space-y-4">
                   <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Rarity</label>
+                    <label className="block text-white/70 text-sm font-medium mb-2">Pack Type</label>
                     <select
-                      value={activeFilters.rarity || ""}
-                      onChange={(e) => setActiveFilters({ ...activeFilters, rarity: e.target.value })}
+                      value={activeFilters.packType || ""}
+                      onChange={(e) => setActiveFilters({ ...activeFilters, packType: e.target.value })}
                       className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
                     >
-                      <option value="">All Rarities</option>
-                      <option value="Common">Common</option>
-                      <option value="Uncommon">Uncommon</option>
-                      <option value="Rare">Rare</option>
-                      <option value="Epic">Epic</option>
-                      <option value="Legend">Legend</option>
-                      <option value="Grail">Grail</option>
-                      <option value="Lineup">Lineup</option>
-                      <option value="Chase">Chase</option>
+                      <option value="">All Pack Types</option>
+                      {PACK_TYPE_OPTIONS.map((type) => (
+                        <option key={type} value={type}>
+                          {packTypeLabels[type]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-white/70 text-sm font-medium mb-2">Sport</label>
+                    <select
+                      value={activeFilters.sportType || ""}
+                      onChange={(e) => setActiveFilters({ ...activeFilters, sportType: e.target.value })}
+                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
+                    >
+                      <option value="">All Sports</option>
+                      {SPORT_TYPE_OPTIONS.map((sport) => (
+                        <option key={sport} value={sport}>
+                          {sportTypeLabels[sport]}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-white/70 text-sm font-medium mb-2">Status</label>
                     <select
-                      value={activeFilters.status || ""}
-                      onChange={(e) => setActiveFilters({ ...activeFilters, status: e.target.value })}
+                      value={activeFilters.isActive || ""}
+                      onChange={(e) => setActiveFilters({ ...activeFilters, isActive: e.target.value })}
                       className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
                     >
                       <option value="">All Status</option>
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
                     </select>
                   </div>
 
                   <div className="border-t border-white/10 pt-4">
-                    <button
-                      onClick={() => setActiveFilters({ rarity: "", status: "" })}
-                      className="w-full text-white/60 hover:text-white text-xs font-medium"
+                    <GameButton
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-center text-xs"
+                      onClick={() =>
+                        setActiveFilters({
+                          packType: "",
+                          sportType: "",
+                          isActive: "",
+                        })
+                      }
                     >
                       Clear Filters
-                    </button>
+                    </GameButton>
                   </div>
                 </div>
               )}
@@ -241,13 +315,14 @@ export default function Packs() {
 
             {/* Sort Button */}
             <div className="relative">
-              <button
+              <GameButton
+                variant="secondary"
                 onClick={() => setShowSort(!showSort)}
-                className="flex items-center gap-2 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors w-full md:w-auto justify-center"
+                className="w-full md:w-auto justify-center gap-2"
               >
                 <ArrowUpDown className="w-5 h-5" />
                 Sort
-              </button>
+              </GameButton>
 
               {showSort && (
                 <div className="absolute top-full right-0 mt-2 w-48 glass rounded-lg p-4 z-50 space-y-3">
@@ -255,38 +330,37 @@ export default function Packs() {
                     <label className="block text-white/70 text-sm font-medium mb-2">Sort By</label>
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as any)}
+                      onChange={(e) =>
+                        setSortBy(e.target.value as "packType" | "createdAt" | "price" | "cards")
+                      }
                       className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
                     >
-                      <option value="name">Name</option>
+                      <option value="packType">Pack Type</option>
                       <option value="createdAt">Created Date</option>
-                      <option value="cardCount">Card Count</option>
+                      <option value="price">Price</option>
+                      <option value="cards">Card Count</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-white/70 text-sm font-medium mb-2">Order</label>
                     <div className="flex gap-2">
-                      <button
+                      <GameButton
+                        size="sm"
+                        variant={sortOrder === "asc" ? "primary" : "ghost"}
+                        className="flex-1"
                         onClick={() => setSortOrder("asc")}
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
-                          sortOrder === "asc"
-                            ? "bg-[#CEFE10] text-black"
-                            : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
-                        }`}
                       >
                         Asc
-                      </button>
-                      <button
+                      </GameButton>
+                      <GameButton
+                        size="sm"
+                        variant={sortOrder === "desc" ? "primary" : "ghost"}
+                        className="flex-1"
                         onClick={() => setSortOrder("desc")}
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
-                          sortOrder === "desc"
-                            ? "bg-[#CEFE10] text-black"
-                            : "bg-black/30 border border-white/20 text-white hover:bg-black/40"
-                        }`}
                       >
                         Desc
-                      </button>
+                      </GameButton>
                     </div>
                   </div>
                 </div>
@@ -301,9 +375,8 @@ export default function Packs() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Pack Name</th>
-                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Theme</th>
-                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Rarity</th>
+                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Pack</th>
+                  <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Price</th>
                   <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Cards</th>
                   <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Status</th>
                   <th className="text-left px-6 py-4 text-white/70 font-semibold text-sm">Created</th>
@@ -313,51 +386,54 @@ export default function Packs() {
               <tbody>
                 {filteredAndSortedPacks.map((pack) => (
                   <tr key={pack.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4 text-white font-semibold">{pack.name}</td>
-                    <td className="px-6 py-4 text-white/70 text-sm">{pack.theme}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${getRarityColor(pack.rarity)}`}>
-                        <Star className="w-3 h-3" fill="currentColor" />
-                        {pack.rarity}
-                      </span>
+                      <p className="text-white font-semibold">{packTypeLabels[pack.packType]}</p>
+                      <p className="text-xs uppercase tracking-[0.3em] text-white/50">{sportTypeLabels[pack.sportType]}</p>
                     </td>
-                    <td className="px-6 py-4 text-white font-semibold">{pack.cardCount}</td>
+                    <td className="px-6 py-4 text-white font-semibold">{formatCurrency(pack.price)}</td>
+                    <td className="px-6 py-4 text-white font-semibold">{pack.cards}</td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        pack.status === "published"
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-yellow-500/20 text-yellow-400"
+                        pack.isActive ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
                       }`}>
-                        {pack.status.charAt(0).toUpperCase() + pack.status.slice(1)}
+                        {pack.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-white/70 text-sm">{pack.createdAt}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/packs/${pack.id}`}
-                          className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors"
-                          title="View"
+                        <GameButton
+                          asChild
+                          size="sm"
+                          variant="ghost"
+                          className="px-3 py-1 normal-case"
                         >
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                        <button
+                          <Link href={`/packs/${pack.id}`} className="flex items-center gap-1">
+                            <Eye className="w-4 h-4" />
+                            View
+                          </Link>
+                        </GameButton>
+                        <GameButton
+                          size="sm"
+                          variant="secondary"
+                          className="px-3 py-1 normal-case"
                           onClick={() => {
                             setEditingPack(pack);
                             setShowPackModal(true);
                           }}
-                          className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors"
-                          title="Edit"
                         >
                           <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
+                          Edit
+                        </GameButton>
+                        <GameButton
+                          size="sm"
+                          variant="danger"
+                          className="px-3 py-1 normal-case"
                           onClick={() => setShowDeleteModal(pack)}
-                          className="p-2 text-white/70 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors"
-                          title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                          Delete
+                        </GameButton>
                       </div>
                     </td>
                   </tr>
@@ -370,65 +446,71 @@ export default function Packs() {
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4">
           {filteredAndSortedPacks.map((pack) => (
-            <div key={pack.id} className="glass p-4 rounded-2xl">
-              <div className="mb-4">
-                <h3 className="text-white font-bold text-lg mb-2">{pack.name}</h3>
-                <p className="text-white/60 text-sm mb-3">{pack.theme}</p>
-
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div>
-                    <p className="text-white/50 text-xs">Rarity</p>
-                    <p className={`text-xs font-semibold ${getRarityColor(pack.rarity)}`}>{pack.rarity}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/50 text-xs">Cards</p>
-                    <p className="text-white font-semibold">{pack.cardCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/50 text-xs">Status</p>
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                      pack.status === "published"
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-yellow-500/20 text-yellow-400"
-                    }`}>
-                      {pack.status.charAt(0).toUpperCase() + pack.status.slice(1)}
-                    </span>
-                  </div>
+            <div key={pack.id} className="glass p-4 rounded-2xl space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-white text-lg font-semibold">{packTypeLabels[pack.packType]}</p>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/60">
+                    {sportTypeLabels[pack.sportType]}
+                  </p>
                 </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    pack.isActive ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-300"
+                  }`}
+                >
+                  {pack.isActive ? "Active" : "Inactive"}
+                </span>
+              </div>
 
-                {pack.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {pack.tags.map((tag, index) => (
-                      <span key={index} className="px-2 py-1 text-xs bg-white/10 text-white/70 rounded-full">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+              <div className="grid grid-cols-2 gap-3 text-white/70 text-sm">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-white/50">Price</p>
+                  <p className="text-white font-semibold">{formatCurrency(pack.price)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-white/50">Cards</p>
+                  <p className="text-white font-semibold">{pack.cards}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-white/50">Sport</p>
+                  <p className="text-white font-semibold">{sportTypeLabels[pack.sportType]}</p>
+                </div>
               </div>
 
               <div className="flex gap-2">
-                <Link
-                  href={`/packs/${pack.id}`}
-                  className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors text-center"
+                <GameButton
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 normal-case px-3 py-2"
                 >
-                  View
-                </Link>
-                <button
+                  <Link href={`/packs/${pack.id}`} className="flex items-center justify-center gap-1">
+                    <Eye className="w-4 h-4" />
+                    View
+                  </Link>
+                </GameButton>
+                <GameButton
+                  size="sm"
+                  variant="secondary"
+                  className="flex-1 normal-case px-3 py-2"
                   onClick={() => {
                     setEditingPack(pack);
                     setShowPackModal(true);
                   }}
-                  className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors"
                 >
+                  <Edit2 className="w-4 h-4" />
                   Edit
-                </button>
-                <button
+                </GameButton>
+                <GameButton
+                  size="sm"
+                  variant="danger"
+                  className="flex-1 normal-case px-3 py-2"
                   onClick={() => setShowDeleteModal(pack)}
-                  className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-semibold py-2 px-3 rounded-lg transition-colors"
                 >
+                  <Trash2 className="w-4 h-4" />
                   Delete
-                </button>
+                </GameButton>
               </div>
             </div>
           ))}
@@ -443,7 +525,7 @@ export default function Packs() {
           setEditingPack(null);
         }}
         onSubmit={editingPack ? handleEditPack : handleCreatePack}
-        initialData={editingPack}
+        initialData={editingPack ? packToFormData(editingPack) : null}
         title={editingPack ? "Edit Pack" : "Create New Pack"}
       />
 

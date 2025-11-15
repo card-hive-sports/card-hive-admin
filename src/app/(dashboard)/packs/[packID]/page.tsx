@@ -2,65 +2,59 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from 'next/link';
+import Link from "next/link";
+import Image from "next/image";
 import { PackModal, PackPreview, ActivityLog, ActivityLogEntry } from "@/lib";
-import { ArrowLeft, Edit2, Plus, Trash2, Tag, Calendar, Layers } from "lucide-react";
+import { ArrowLeft, Edit2, Plus, Trash2 } from "lucide-react";
+import { GameButton } from "@/lib/ui";
+import type { Pack, PackFormData, PackType, SportType } from "@/lib/types/pack";
 
-interface PackCard {
-  id: string;
-  name: string;
-  rarity: string;
-}
+const packTypeLabels: Record<PackType, string> = {
+  DRAFT: "Draft",
+  PRO: "Pro",
+  ALL_STARS: "All Stars",
+  HALL_OF_FAME: "Hall of Fame",
+  LEGENDS: "Legends",
+};
 
-interface PackDetail {
-  id: string;
-  name: string;
-  theme: string;
-  rarity: string;
-  releaseDate: string;
-  releaseType: string;
-  status: "draft" | "published";
-  tags: string[];
-  cards: PackCard[];
-  createdAt: string;
-  updatedAt: string;
-}
+const sportTypeLabels: Record<SportType, string> = {
+  FOOTBALL: "Football",
+  BASEBALL: "Baseball",
+  BASKETBALL: "Basketball",
+  MULTISPORT: "Multisport",
+};
 
-const PACK_DATA: Record<string, PackDetail> = {
-  "1": {
-    id: "1",
-    name: "Golden Era Basketball",
-    theme: "Basketball",
-    rarity: "Legend",
-    releaseDate: "2024-02-01",
-    releaseType: "standard",
-    status: "published",
-    tags: ["basketball", "vintage", "iconic"],
-    cards: [
-      { id: "1", name: "Michael Jordan", rarity: "Legend" },
-      { id: "2", name: "LeBron James", rarity: "Legend" },
-      { id: "3", name: "Kobe Bryant", rarity: "Epic" },
-      { id: "4", name: "Magic Johnson", rarity: "Epic" },
-    ],
-    createdAt: "2024-01-15",
-    updatedAt: "2024-01-20",
+const formatCurrency = (value?: string) => {
+  if (!value || Number.isNaN(Number(value))) return "-";
+  return `$${Number(value).toFixed(2)}`;
+};
+
+const PACK_DATA: Record<string, Pack> = {
+  "pack-1": {
+    id: "pack-1",
+    packType: "LEGENDS",
+    sportType: "FOOTBALL",
+    description: "High-end football talent featuring legendary rookies and veterans with premium parallels.",
+    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
+    bannerUrl: "https://images.unsplash.com/photo-1505842465776-3d8f0d5f4f6a",
+    price: "79.99",
+    cards: 32,
+    isActive: true,
+    createdAt: "2024-01-02",
+    updatedAt: "2024-01-15",
   },
-  "2": {
-    id: "2",
-    name: "Modern Athletes",
-    theme: "Contemporary Sports",
-    rarity: "Rare",
-    releaseDate: "2024-02-15",
-    releaseType: "limited",
-    status: "published",
-    tags: ["modern", "sports", "trending"],
-    cards: [
-      { id: "5", name: "Stephen Curry", rarity: "Rare" },
-      { id: "6", name: "Kevin Durant", rarity: "Rare" },
-      { id: "7", name: "Giannis Antetokounmpo", rarity: "Rare" },
-    ],
+  "pack-2": {
+    id: "pack-2",
+    packType: "ALL_STARS",
+    sportType: "BASEBALL",
+    description: "A carefully curated mix of baseball greats and rising stars ready for collectors.",
+    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
+    bannerUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+    price: "59.50",
+    cards: 28,
+    isActive: true,
     createdAt: "2024-01-10",
-    updatedAt: "2024-01-18",
+    updatedAt: "2024-02-12",
   },
 };
 
@@ -69,7 +63,7 @@ const ACTIVITY_LOG: ActivityLogEntry[] = [
     id: "1",
     type: "publish",
     title: "Pack Published",
-    description: "Golden Era Basketball pack was published to production",
+    description: "Legendary football pack was published to production",
     timestamp: new Date(Date.now() - 3600000).toISOString(),
     user: "Admin User",
   },
@@ -77,7 +71,7 @@ const ACTIVITY_LOG: ActivityLogEntry[] = [
     id: "2",
     type: "update",
     title: "Pack Updated",
-    description: "Updated metadata and tags for the pack",
+    description: "Updated metadata for the pack",
     timestamp: new Date(Date.now() - 86400000).toISOString(),
     user: "Admin User",
   },
@@ -85,37 +79,50 @@ const ACTIVITY_LOG: ActivityLogEntry[] = [
     id: "3",
     type: "create",
     title: "Pack Created",
-    description: "Golden Era Basketball pack was created",
+    description: "Pack was created in the system",
     timestamp: new Date(Date.now() - 432000000).toISOString(),
     user: "Admin User",
   },
 ];
 
+const packToFormData = (pack: Pack): PackFormData => ({
+  name: pack.name ?? "",
+  packType: pack.packType,
+  sportType: pack.sportType,
+  description: pack.description,
+  imageUrl: pack.imageUrl,
+  bannerUrl: pack.bannerUrl,
+  price: pack.price,
+  isActive: pack.isActive,
+});
+
 export default function PackDetail() {
   const { id } = useParams();
   const router = useRouter();
 
-  const [pack, setPack] = useState<PackDetail | null>(PACK_DATA[id as string || "1"] || null);
+  const [pack, setPack] = useState<Pack | null>(PACK_DATA[id as string || "pack-1"] || null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   if (!pack) {
     return (
-      <>
-        <div className="p-4 md:p-8 flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <h2 className="text-white text-2xl font-bold mb-2">Pack not found</h2>
-            <Link href="/packs" className="text-[#CEFE10] hover:underline">
-              Back to Packs
-            </Link>
-          </div>
+      <div className="p-4 md:p-8 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-white text-2xl font-bold mb-2">Pack not found</h2>
+          <Link href="/packs" className="text-[#CEFE10] hover:underline">
+            Back to Packs
+          </Link>
         </div>
-      </>
+      </div>
     );
   }
 
-  const handleEditPack = (formData: any) => {
-    setPack({ ...pack, ...formData, updatedAt: new Date().toISOString().split("T")[0] });
+  const handleEditPack = (formData: PackFormData) => {
+    setPack((current) =>
+      current
+        ? { ...current, ...formData, updatedAt: new Date().toISOString().split("T")[0] }
+        : current
+    );
     setShowEditModal(false);
   };
 
@@ -123,24 +130,9 @@ export default function PackDetail() {
     router.push("/packs");
   };
 
-  const getRarityColor = (rarity: string) => {
-    const colors: Record<string, string> = {
-      common: "bg-gray-500/20 text-gray-400",
-      uncommon: "bg-green-500/20 text-green-400",
-      rare: "bg-blue-500/20 text-blue-400",
-      epic: "bg-purple-500/20 text-purple-400",
-      legend: "bg-yellow-500/20 text-yellow-400",
-      grail: "bg-[#CEFE10]/20 text-[#CEFE10]",
-      lineup: "bg-orange-500/20 text-orange-400",
-      chase: "bg-cyan-500/20 text-cyan-400",
-    };
-    return colors[rarity.toLowerCase()] || colors.common;
-  };
-
   return (
     <>
       <div className="p-4 md:p-8 space-y-6">
-        {/* Back Button */}
         <button
           onClick={() => router.push("/packs")}
           className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
@@ -149,180 +141,137 @@ export default function PackDetail() {
           Back to Packs
         </button>
 
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div>
-            <h2 className="text-white text-3xl font-bold mb-2">{pack.name}</h2>
-            <p className="text-white/60">{pack.theme}</p>
+            <h2 className="text-white text-3xl font-bold mb-2">{packTypeLabels[pack.packType]}</h2>
+            <p className="text-white/60">{sportTypeLabels[pack.sportType]}</p>
           </div>
           <div className="flex gap-2">
-            <button
+            <GameButton
+              size="sm"
+              className="flex-1 gap-2"
               onClick={() => setShowEditModal(true)}
-              className="flex items-center gap-2 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors"
             >
               <Edit2 className="w-4 h-4" />
               Edit
-            </button>
-            <button
+            </GameButton>
+            <GameButton
+              size="sm"
+              variant="danger"
+              className="flex-1 gap-2"
               onClick={() => setShowDeleteModal(true)}
-              className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold py-2 px-4 rounded-lg transition-colors border border-red-500/30"
             >
               <Trash2 className="w-4 h-4" />
               Delete
-            </button>
+            </GameButton>
           </div>
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Pack Details and Cards */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Pack Info Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="glass p-4 rounded-2xl">
                 <p className="text-white/60 text-xs font-medium mb-1">Status</p>
-                <p className={`text-sm font-bold ${
-                  pack.status === "published"
-                    ? "text-green-400"
-                    : "text-yellow-400"
-                }`}>
-                  {pack.status.charAt(0).toUpperCase() + pack.status.slice(1)}
+                <p
+                  className={`text-sm font-bold ${
+                    pack.isActive ? "text-green-400" : "text-yellow-400"
+                  }`}
+                >
+                  {pack.isActive ? "Active" : "Inactive"}
                 </p>
               </div>
-
               <div className="glass p-4 rounded-2xl">
-                <p className="text-white/60 text-xs font-medium mb-1">Rarity</p>
-                <p className={`text-sm font-bold ${getRarityColor(pack.rarity)}`}>{pack.rarity}</p>
+                <p className="text-white/60 text-xs font-medium mb-1">Pack Type</p>
+                <p className="text-white font-semibold">{packTypeLabels[pack.packType]}</p>
               </div>
-
+              <div className="glass p-4 rounded-2xl">
+                <p className="text-white/60 text-xs font-medium mb-1">Sport</p>
+                <p className="text-white font-semibold">{sportTypeLabels[pack.sportType]}</p>
+              </div>
               <div className="glass p-4 rounded-2xl">
                 <p className="text-white/60 text-xs font-medium mb-1">Cards</p>
-                <p className="text-white text-sm font-bold">{pack.cards.length}</p>
-              </div>
-
-              <div className="glass p-4 rounded-2xl">
-                <p className="text-white/60 text-xs font-medium mb-1">Release Type</p>
-                <p className="text-white text-sm font-bold capitalize">{pack.releaseType}</p>
+                <p className="text-white text-sm font-bold">{pack.cards}</p>
               </div>
             </div>
 
-            {/* Metadata Section */}
             <div className="glass p-6 rounded-2xl space-y-4">
               <h3 className="text-white text-lg font-bold">Metadata</h3>
-
-              <div className="grid grid-cols-2 gap-4">
+              <p className="text-white/70 text-sm leading-relaxed">
+                {pack.description || "No extra description has been provided for this pack yet."}
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-white/60 text-sm font-medium mb-2 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Release Date
-                  </p>
-                  <p className="text-white font-semibold">{pack.releaseDate}</p>
+                  <p className="text-white/60 text-xs font-medium mb-1">Price</p>
+                  <p className="text-white font-semibold">{formatCurrency(pack.price)}</p>
                 </div>
-
                 <div>
-                  <p className="text-white/60 text-sm font-medium mb-2 flex items-center gap-2">
-                    <Layers className="w-4 h-4" />
-                    Pack Type
-                  </p>
-                  <p className="text-white font-semibold capitalize">{pack.releaseType}</p>
+                  <p className="text-white/60 text-xs font-medium mb-1">Created</p>
+                  <p className="text-white/80 text-sm">{pack.createdAt}</p>
                 </div>
-              </div>
-
-              <div>
-                <p className="text-white/60 text-sm font-medium mb-2 flex items-center gap-2">
-                  <Tag className="w-4 h-4" />
-                  Tags
-                </p>
-                {pack.tags.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {pack.tags.map((tag, index) => (
-                      <span key={index} className="px-3 py-1 bg-white/10 text-white/70 rounded-full text-sm">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-white/50 text-sm">No tags assigned</p>
-                )}
-              </div>
-
-              <div className="pt-4 border-t border-white/10 text-xs text-white/50 space-y-1">
-                <p>Created: {pack.createdAt}</p>
-                <p>Last Updated: {pack.updatedAt}</p>
+                <div>
+                  <p className="text-white/60 text-xs font-medium mb-1">Last Updated</p>
+                  <p className="text-white/80 text-sm">{pack.updatedAt}</p>
+                </div>
+                <div>
+                  <p className="text-white/60 text-xs font-medium mb-1">Cover Image</p>
+                  {pack.imageUrl ? (
+                    <div className="relative h-24 w-full overflow-hidden rounded-xl border border-white/10">
+                      <Image
+                        src={pack.imageUrl}
+                        alt={`${packTypeLabels[pack.packType]} cover`}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-white/50 text-sm">No cover image</p>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Cards Section */}
             <div className="glass p-6 rounded-2xl space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-white text-lg font-bold">Cards in Pack ({pack.cards.length})</h3>
+                <h3 className="text-white text-lg font-bold">Cards</h3>
+                <span className="text-white/60 text-sm">{pack.cards} card{pack.cards === 1 ? "" : "s"}</span>
+              </div>
+              <p className="text-white/70 text-sm">
+                The API only returns the total number of cards inside a pack — the actual card data is managed
+                through the Cards section.
+              </p>
+              <GameButton asChild>
                 <Link
                   href="/cards"
-                  className="flex items-center gap-1 text-[#CEFE10] hover:text-[#b8e80d] text-sm font-semibold transition-colors"
+                  className="inline-flex items-center gap-2 text-black font-semibold py-2 px-4 rounded-lg"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Card
+                  Manage Cards
                 </Link>
-              </div>
-
-              {pack.cards.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {pack.cards.map((card) => (
-                    <div key={card.id} className="bg-black/30 p-4 rounded-lg border border-white/10 hover:border-[#CEFE10]/30 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="text-white font-semibold mb-1">{card.name}</p>
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getRarityColor(card.rarity)}`}>
-                            {card.rarity}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-white/50 mb-4">No cards in this pack yet</p>
-                  <Link
-                    href="/cards"
-                    className="inline-flex items-center gap-2 bg-[#CEFE10] hover:bg-[#b8e80d] text-black font-semibold py-2 px-4 rounded-lg transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Create First Card
-                  </Link>
-                </div>
-              )}
+              </GameButton>
             </div>
           </div>
 
-          {/* Right Column - Pack Preview and Activity Log */}
           <div className="space-y-6">
-            {/* Pack Preview */}
             <PackPreview
-              name={pack.name}
-              theme={pack.theme}
-              rarity={pack.rarity}
-              releaseDate={pack.releaseDate}
-              cardCount={pack.cards.length}
-              cards={pack.cards}
+              packType={pack.packType}
+              sportType={pack.sportType}
+              price={pack.price}
+              bannerUrl={pack.bannerUrl}
             />
-
-            {/* Activity Log */}
             <ActivityLog entries={ACTIVITY_LOG} maxHeight="max-h-72" />
           </div>
         </div>
       </div>
 
-      {/* Edit Modal */}
       <PackModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         onSubmit={handleEditPack}
-        initialData={pack}
+        initialData={pack ? packToFormData(pack) : null}
         title="Edit Pack"
       />
 
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <>
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={() => setShowDeleteModal(false)} />
@@ -334,11 +283,13 @@ export default function PackDetail() {
                 </div>
                 <h2 className="text-white text-xl font-bold">Delete Pack</h2>
               </div>
-
               <p className="text-white/70 mb-6">
-                Are you sure you want to delete <strong>{pack.name}</strong>? All cards in this pack will be permanently removed. This action cannot be undone.
+                Are you sure you want to delete the{" "}
+                <strong>
+                  {packTypeLabels[pack.packType]} · {sportTypeLabels[pack.sportType]}
+                </strong>{" "}
+                pack? This action cannot be undone.
               </p>
-
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}

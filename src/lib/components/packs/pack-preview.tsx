@@ -1,90 +1,81 @@
-import { Package, Star } from "lucide-react";
+import Image from "next/image";
+import type { PackType, SportType } from "@/lib/types/pack";
 
-interface PackCard {
-  id: string;
-  name: string;
-  rarity: string;
-}
-
-interface PackPreviewProps {
-  name: string;
-  theme: string;
-  rarity: string;
-  releaseDate: string;
-  cardCount: number;
-  cards?: PackCard[];
-}
-
-const rarityColors: Record<string, { bg: string; text: string; glow: string }> = {
-  common: { bg: "from-gray-600 to-gray-700", text: "text-gray-300", glow: "shadow-gray-500/20" },
-  uncommon: { bg: "from-green-600 to-green-700", text: "text-green-300", glow: "shadow-green-500/20" },
-  rare: { bg: "from-blue-600 to-blue-700", text: "text-blue-300", glow: "shadow-blue-500/20" },
-  epic: { bg: "from-purple-600 to-purple-700", text: "text-purple-300", glow: "shadow-purple-500/20" },
-  legend: { bg: "from-yellow-600 to-yellow-700", text: "text-yellow-300", glow: "shadow-yellow-500/20" },
-  grail: { bg: "from-amber-500 to-amber-600", text: "text-amber-200", glow: "shadow-amber-500/20" },
-  lineup: { bg: "from-orange-600 to-orange-700", text: "text-orange-300", glow: "shadow-orange-500/20" },
-  chase: { bg: "from-cyan-600 to-cyan-700", text: "text-cyan-300", glow: "shadow-cyan-500/20" },
+const packTypeLabels: Record<PackType, string> = {
+  DRAFT: "Draft",
+  PRO: "Pro",
+  ALL_STARS: "All Stars",
+  HALL_OF_FAME: "Hall of Fame",
+  LEGENDS: "Legends",
 };
 
-export const PackPreview = ({ name, theme, rarity, releaseDate, cardCount, cards }: PackPreviewProps) => {
-  const colors = rarityColors[rarity.toLowerCase()] || rarityColors.common;
+const sportTypeLabels: Record<SportType, string> = {
+  FOOTBALL: "Football",
+  BASEBALL: "Baseball",
+  BASKETBALL: "Basketball",
+  MULTISPORT: "Multisport",
+};
 
+const sportIcons: Record<SportType, string> = {
+  FOOTBALL: "/icons/sports/football.svg",
+  BASEBALL: "/icons/sports/baseball.svg",
+  BASKETBALL: "/icons/sports/basketball.svg",
+  MULTISPORT: "/icons/sports/multisport.svg",
+};
+
+interface PackPreviewProps {
+  packType: PackType;
+  sportType: SportType;
+  price: string;
+  bannerUrl?: string;
+}
+
+const formatCurrency = (value?: string) => {
+  if (!value || Number.isNaN(Number(value))) return "-";
+  return `$${Number(value).toFixed(2)}`;
+};
+
+const cutSize = 10;
+const cutClipPath = `polygon(0 0, 100% 0, 100% calc(100% - ${cutSize}px), calc(100% - ${cutSize}px) 100%, 0 100%, 0 ${cutSize}px)`;
+
+export const PackPreview = ({ packType, sportType, price, bannerUrl }: PackPreviewProps) => {
   return (
-    <div className="h-full flex items-center justify-center p-4">
-      <div className={`w-full max-w-sm bg-gradient-to-br ${colors.bg} rounded-2xl p-8 shadow-2xl ${colors.glow}`}>
-        {/* Pack Header */}
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Star className={`w-6 h-6 ${colors.text}`} fill="currentColor" />
-            <span className={`text-sm font-bold uppercase ${colors.text}`}>{rarity}</span>
-            <Star className={`w-6 h-6 ${colors.text}`} fill="currentColor" />
-          </div>
-          <h2 className="text-white text-3xl font-bold mb-2">{name || "Pack Name"}</h2>
-          {theme && <p className="text-white/80 text-sm">{theme}</p>}
-        </div>
-
-        {/* Pack Info */}
-        <div className="bg-black/30 rounded-xl p-4 mb-8 space-y-3">
-          {releaseDate && (
-            <div className="flex justify-between items-center">
-              <span className="text-white/70 text-sm">Release Date</span>
-              <span className="text-white font-semibold">{releaseDate}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center border-t border-white/10 pt-3">
-            <span className="text-white/70 text-sm">Card Count</span>
-            <span className="text-white font-semibold">{cardCount}</span>
-          </div>
-        </div>
-
-        {/* Pack Cards Preview */}
-        {cards && cards.length > 0 && (
-          <div className="mb-8">
-            <p className="text-white/70 text-xs font-medium mb-3 uppercase">Cards in Pack</p>
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-              {cards.slice(0, 4).map((card) => (
-                <div key={card.id} className="bg-black/40 rounded-lg p-2 text-center">
-                  <p className="text-white text-xs font-semibold truncate">{card.name}</p>
-                  <p className={`text-xs ${rarityColors[card.rarity.toLowerCase()]?.text || "text-gray-400"}`}>
-                    {card.rarity}
-                  </p>
-                </div>
-              ))}
-              {cards.length > 4 && (
-                <div className="col-span-2 bg-black/40 rounded-lg p-2 text-center">
-                  <p className="text-white/70 text-xs">+ {cards.length - 4} more</p>
-                </div>
-              )}
-            </div>
-          </div>
+    <div className="relative h-64 w-full overflow-hidden rounded-3xl border border-white/10 bg-black/10 shadow-2xl">
+      <div className="absolute inset-0">
+        {bannerUrl ? (
+          <Image
+            src={bannerUrl}
+            alt={`${packTypeLabels[packType]} banner`}
+            fill
+            className="object-cover"
+            unoptimized
+          />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-white/10 to-black/60" />
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
+      </div>
 
-        {/* CTA Button */}
-        <button className={`w-full py-3 rounded-lg font-bold text-black bg-white hover:bg-white/90 transition-colors duration-200 flex items-center justify-center gap-2`}>
-          <Package className="w-5 h-5" />
-          {cards && cards.length > 0 ? "View Pack" : "Open Pack"}
-        </button>
+      <div className="relative z-10 flex h-full flex-col justify-between p-4">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] uppercase tracking-[0.4em] text-white/70">
+            {packTypeLabels[packType]}
+          </span>
+          <span className="text-3xl font-bold text-white">{formatCurrency(price)}</span>
+        </div>
+      </div>
+
+      <div className="absolute bottom-4 right-4 h-16 w-16 rounded-[20px] bg-black/70 border border-white/20 shadow-lg" style={{ clipPath: cutClipPath }}>
+        <div className="relative h-full w-full overflow-hidden">
+          <Image
+            src={sportIcons[sportType]}
+            alt={`${sportTypeLabels[sportType]} icon`}
+            fill
+            className="object-cover scale-125 translate-x-2 translate-y-2"
+            unoptimized
+          />
+        </div>
       </div>
     </div>
   );
-}
+};
