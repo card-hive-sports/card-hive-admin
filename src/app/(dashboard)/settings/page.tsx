@@ -228,7 +228,7 @@ const Settings = () => {
                 payload={() => ({
                   title: `${profile.fullName}'s profile avatar`,
                   folder: "avatars",
-                  metadata: { userId: profile.id },
+                  metadata: { userID: profile.id },
                 })}
                 uploadButtonLabel="Save Profile Picture"
                 onUploadSuccess={handleAvatarUploadSuccess}
