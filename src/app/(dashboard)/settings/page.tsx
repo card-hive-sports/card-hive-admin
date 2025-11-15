@@ -5,10 +5,13 @@ import {
   authAPI,
   AuthProvider,
   AuthResponse,
+  ImageUploadWithCrop,
   LoginActivity,
+  MediaUploadProgress,
   PageHeader,
   ResourceToolbar,
   Skeleton,
+  SkeletonCircle,
   SkeletonText,
   usersAPI,
   Pagination,
@@ -27,7 +30,23 @@ const providerLabelMap: Record<AuthProvider, string> = {
   [AuthProvider.PHONE]: "Phone",
 };
 
-const ACTIVITY_PAGE_LIMIT = 5;
+const ACTIVITY_PAGE_LIMIT = 6;
+
+const getInitials = (fullName?: string) => {
+  if (!fullName) return "??";
+  const cleaned = fullName.trim();
+  if (!cleaned) return "??";
+  const parts = cleaned.split(/\s+/);
+  if (!parts.length) return "??";
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  const first = parts[0]?.[0] ?? "";
+  const last = parts[parts.length - 1]?.[0] ?? "";
+  if (!first && !last) return "??";
+  if (!last) return first.toUpperCase();
+  return `${first}${last}`.toUpperCase();
+};
 
 const Settings = () => {
   const [profile, setProfile] = useState<AuthResponse['user'] | null>(null);
@@ -108,6 +127,24 @@ const Settings = () => {
     }
   };
 
+  const handleAvatarUploadSuccess = async (upload: MediaUploadProgress) => {
+    if (!profile) return;
+    const avatarUrl = upload.url;
+    if (!avatarUrl) {
+      toast.error("Uploaded image could not be resolved. Please try again.");
+      return;
+    }
+
+    try {
+      await usersAPI.updateUser(profile.id, { avatarUrl });
+      toast.success("Profile picture saved");
+      fetchProfile();
+    } catch (error) {
+      const message = "Unable to save profile picture. Please try again.";
+      showApiError("save profile picture", error as AxiosError, message);
+    }
+  };
+
   const filteredActivities = activities.filter((activity) => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
@@ -131,10 +168,41 @@ const Settings = () => {
 
   return (
     <div className="p-4 md:p-8 space-y-6">
-      <PageHeader
-        title="Settings"
-        subtitle="Manage your admin profile and security settings"
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <PageHeader
+            title="Settings"
+            subtitle="Manage your admin profile and security settings"
+          />
+        </div>
+        <div className="flex items-center">
+          {profileLoading ? (
+            <SkeletonCircle className="h-12 w-12 rounded-full border border-white/20 bg-white/10" />
+          ) : (
+            <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-black/40 px-3 py-2">
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/5">
+                {profile?.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={`${profile.fullName}'s avatar`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold uppercase tracking-wide text-white/80">
+                    {getInitials(profile?.fullName)}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col text-right text-[11px] text-white/60">
+                <span className="text-sm font-semibold text-white">
+                  {profile?.fullName ?? "Profile"}
+                </span>
+                <span className="uppercase tracking-wider text-white/40">Profile</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="glass p-6 rounded-2xl space-y-6">
@@ -151,61 +219,83 @@ const Settings = () => {
           {profileLoading ? (
             <ProfileSkeleton />
           ) : profile ? (
-            <form className="space-y-4" onSubmit={handleProfileUpdate}>
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">Full Name</label>
-                <input
-                  name="fullName"
-                  type="text"
-                  defaultValue={profile.fullName}
-                  className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">Email Address</label>
-                <div className="flex items-center gap-3 bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white">
-                  <Mail className="w-4 h-4 text-white/60" />
-                  <input
-                    name="email"
-                    type="email"
-                    defaultValue={profile.email}
-                    className="flex-1 bg-transparent border-0 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">Phone Number</label>
-                <div className="flex items-center gap-3 bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white">
-                  <Phone className="w-4 h-4 text-white/60" />
-                  <input
-                    name="phone"
-                    type="tel"
-                    defaultValue={profile.phone ?? ""}
-                    placeholder="+1 (555) 123-4567"
-                    className="flex-1 bg-transparent border-0 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 bg-black/30 border border-white/20 rounded-lg px-4 py-3 text-white/70 text-sm">
-                <ShieldCheck className="w-4 h-4 text-[#CEFE10]" />
+            <div className="space-y-6">
+              <ImageUploadWithCrop
+                label="Profile Picture"
+                description="Crop and upload a personalized profile image for your admin account."
+                dropZoneLabel="Drop a profile photo or choose a file"
+                initialPresetId="avatar"
+                payload={() => ({
+                  title: `${profile.fullName}'s profile avatar`,
+                  folder: "avatars",
+                  metadata: { userId: profile.id },
+                })}
+                uploadButtonLabel="Save Profile Picture"
+                onUploadSuccess={handleAvatarUploadSuccess}
+                onUploadError={(error) =>
+                  showApiError(
+                    "upload profile picture",
+                    error as AxiosError,
+                    "Unable to upload the profile picture. Please try again.",
+                  )
+                }
+              />
+              <form className="space-y-4" onSubmit={handleProfileUpdate}>
                 <div>
-                  <p className="text-white font-semibold text-sm">Role</p>
-                  <p className="text-white/70 text-xs">{profile.role}</p>
+                  <label className="block text-white/70 text-sm font-medium mb-2">Full Name</label>
+                  <input
+                    name="fullName"
+                    type="text"
+                    defaultValue={profile.fullName}
+                    className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
+                  />
                 </div>
-              </div>
 
-              <div className="flex gap-3 pt-2">
-                <GameButton type="submit" className="flex-1">
-                  Save Changes
-                </GameButton>
-                <GameButton type="button" variant="secondary" className="flex-1" onClick={fetchProfile}>
-                  Reset
-                </GameButton>
-              </div>
-            </form>
+                <div>
+                  <label className="block text-white/70 text-sm font-medium mb-2">Email Address</label>
+                  <div className="flex items-center gap-3 bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white">
+                    <Mail className="w-4 h-4 text-white/60" />
+                    <input
+                      name="email"
+                      type="email"
+                      defaultValue={profile.email}
+                      className="flex-1 bg-transparent border-0 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-white/70 text-sm font-medium mb-2">Phone Number</label>
+                  <div className="flex items-center gap-3 bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white">
+                    <Phone className="w-4 h-4 text-white/60" />
+                    <input
+                      name="phone"
+                      type="tel"
+                      defaultValue={profile.phone ?? ""}
+                      placeholder="+1 (555) 123-4567"
+                      className="flex-1 bg-transparent border-0 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 bg-black/30 border border-white/20 rounded-lg px-4 py-3 text-white/70 text-sm">
+                  <ShieldCheck className="w-4 h-4 text-[#CEFE10]" />
+                  <div>
+                    <p className="text-white font-semibold text-sm">Role</p>
+                    <p className="text-white/70 text-xs">{profile.role}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <GameButton type="submit" className="flex-1">
+                    Save Changes
+                  </GameButton>
+                  <GameButton type="button" variant="secondary" className="flex-1" onClick={fetchProfile}>
+                    Reset
+                  </GameButton>
+                </div>
+              </form>
+            </div>
           ) : null}
         </section>
 
@@ -310,6 +400,7 @@ export default Settings;
 
 const ProfileSkeleton = () => (
   <div className="space-y-4">
+    <Skeleton className="h-40 w-full" />
     <div className="space-y-2">
       <Skeleton className="h-5 w-28" />
       <Skeleton className="h-10 w-full" />

@@ -19,6 +19,22 @@ const Layout: FC<LayoutProps> = ({ children }) => {
   const { user } = useAuth();
   const profileRef = useRef<HTMLDivElement>(null);
 
+  const getInitials = (fullName?: string) => {
+    if (!fullName) return "AD";
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "AD";
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    const first = parts[0][0] ?? "";
+    const last = parts[parts.length - 1][0] ?? "";
+    if (!first && !last) return "AD";
+    if (!last) return first.toUpperCase();
+    return `${first}${last}`.toUpperCase();
+  };
+
+  const initials = getInitials(user?.fullName ?? undefined);
+
   const menuItems = [
     { name: "Home", path: "/home", icon: LayoutDashboard },
       { name: "Users", path: "/users", icon: Users },
@@ -137,20 +153,25 @@ const Layout: FC<LayoutProps> = ({ children }) => {
             </button>
 
             <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="w-10 h-10 rounded-full bg-[#CEFE10] text-black font-bold flex items-center justify-center hover:bg-[#b8e80d] transition-colors duration-200 cursor-pointer"
-              >
-                {
-                  user?.fullName
-                    ? user.fullName
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .toUpperCase()
-                    : 'AD'
-                }
-              </button>
+            <button
+              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              className="w-10 h-10 rounded-full bg-[#CEFE10] text-black font-bold flex items-center justify-center hover:bg-[#b8e80d] transition-colors duration-200 cursor-pointer"
+            >
+              {user?.avatarUrl ? (
+                <span className="relative inline-flex h-full w-full overflow-hidden rounded-full">
+                  <Image
+                    src={user.avatarUrl}
+                    alt={`${user.fullName}'s avatar`}
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                    unoptimized
+                  />
+                </span>
+              ) : (
+                initials
+              )}
+            </button>
 
               {profileDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 glass-dark rounded-lg shadow-lg overflow-hidden z-50">

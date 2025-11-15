@@ -23,5 +23,6 @@ export interface AuthResponse {
     role: string;
     kycStatus: string;
     createdAt: string;
+    avatarUrl?: string;
   };
 }

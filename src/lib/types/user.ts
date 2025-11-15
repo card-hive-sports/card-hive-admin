@@ -58,6 +58,7 @@ export interface User {
   walletCurrency: string;
   createdAt: string;
   updatedAt: string;
+  avatarUrl?: string | null;
 
   cardsOwned?: number;
   authProviders?: AuthProviderLink[];
@@ -130,9 +131,5 @@ export interface UpdateUserData {
   email?: string;
   phone?: string;
   dateOfBirth?: string;
-  role?: UserRole;
-  kycStatus?: string;
-  isActive?: boolean;
-  walletBalance?: number;
-  walletCurrency?: string;
+  avatarUrl?: string;
 }
