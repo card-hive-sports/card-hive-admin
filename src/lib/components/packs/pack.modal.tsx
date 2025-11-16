@@ -1,6 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+'use client';
+
+import { useEffect, useState } from "react";
+import { AxiosError } from "axios";
 import { X } from "lucide-react";
+import { clsx } from "clsx";
+import { ImageUploadWithCrop } from "@/lib/components/media";
+import type { MediaUploadProgress } from "@/lib/types/media";
 import { PACK_TYPE_OPTIONS, SPORT_TYPE_OPTIONS, type PackFormData, type PackType, type SportType } from "@/lib/types/pack";
+import { showApiError } from "@/lib/utils/show-api-error";
+import { GameButton } from "@/lib/ui";
 
 interface PackModalProps {
   isOpen: boolean;
@@ -34,32 +42,48 @@ export const PackModal = ({ isOpen, onClose, onSubmit, initialData, title }: Pac
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
+    } else {
+      setFormData(DEFAULT_FORM_DATA);
+      setErrors({});
     }
   }, [initialData]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const target = e.target;
-    const { name, value } = target;
-
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        target instanceof HTMLInputElement && target.type === "checkbox"
-          ? target.checked
-          : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
-
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
+  };
+
+  const handleMediaUploadSuccess =
+    (field: "imageUrl" | "bannerUrl") => (upload: MediaUploadProgress) => {
+      if (!upload.url) return;
+      setFormData((prev) => ({ ...prev, [field]: upload.url ?? prev[field] }));
+      if (errors[field]) {
+        setErrors((prev) => ({ ...prev, [field]: "" }));
+      }
+    };
+
+  const handleMediaUploadError = (label: string) => (error: unknown) => {
+    showApiError(`upload ${label}`, error as AxiosError, "Unable to upload the image. Please try again.");
+  };
+
+  const toggleActiveState = () => {
+    setFormData((prev) => ({ ...prev, isActive: !prev.isActive }));
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.packType) newErrors.packType = "Select a pack type";
     if (!formData.sportType) newErrors.sportType = "Select a sport";
+    if (!formData.bannerUrl.trim()) newErrors.bannerUrl = "Upload a banner";
+    if (!formData.imageUrl.trim()) newErrors.imageUrl = "Upload an image";
     if (!formData.price.trim() || Number.isNaN(Number(formData.price))) {
       newErrors.price = "Valid price is required";
     }
@@ -93,8 +117,8 @@ export const PackModal = ({ isOpen, onClose, onSubmit, initialData, title }: Pac
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
                 <label className="block text-white/70 text-sm font-medium mb-2">
                   Price <span className="text-red-400">*</span>
                 </label>
@@ -112,22 +136,7 @@ export const PackModal = ({ isOpen, onClose, onSubmit, initialData, title }: Pac
                 />
                 {errors.price && <p className="text-red-400 text-xs mt-1">{errors.price}</p>}
               </div>
-              <div className="flex flex-col justify-end">
-                <label className="text-white/70 text-sm font-medium mb-1">Active</label>
-                <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="isActive"
-                    checked={formData.isActive}
-                    onChange={handleChange}
-                    className="h-4 w-4 rounded border-white/30 bg-black/30"
-                  />
-                  <span>{formData.isActive ? "Live" : "Paused"}</span>
-                </label>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-white/70 text-sm font-medium mb-2">
                   Pack Type <span className="text-red-400">*</span>
@@ -148,6 +157,7 @@ export const PackModal = ({ isOpen, onClose, onSubmit, initialData, title }: Pac
                 </select>
                 {errors.packType && <p className="text-red-400 text-xs mt-1">{errors.packType}</p>}
               </div>
+
               <div>
                 <label className="block text-white/70 text-sm font-medium mb-2">
                   Sport Type <span className="text-red-400">*</span>
@@ -178,39 +188,105 @@ export const PackModal = ({ isOpen, onClose, onSubmit, initialData, title }: Pac
                 onChange={handleChange}
                 rows={3}
                 placeholder="Summarize what makes this pack special"
-                className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#CEFE10] transition-colors"
+                className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#CEFE10]"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">Image URL</label>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white/70 text-sm font-medium">Pack Image</p>
+                    <p className="text-xs text-white/40">Thumbnail used throughout the UI</p>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-wider text-white/50">
+                    {formData.imageUrl ? "Linked" : "Required"}
+                  </span>
+                </div>
+                <ImageUploadWithCrop
+                  label="Pack Thumbnail"
+                  description="Cropped square for listing cards"
+                  dropZoneLabel="Drop pack thumbnail or browse"
+                  initialPresetId="thumbnail"
+                  uploadButtonLabel="Upload Thumbnail"
+                  onUploadSuccess={handleMediaUploadSuccess("imageUrl")}
+                  onUploadError={handleMediaUploadError("pack thumbnail")}
+                  showUploadedPreview
+                />
                 <input
                   name="imageUrl"
                   value={formData.imageUrl}
                   onChange={handleChange}
-                  placeholder="https://..."
-                  className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10] transition-colors"
+                  placeholder="Or paste an image URL"
+                  className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
                 />
+                {errors.imageUrl && <p className="text-red-400 text-xs mt-1">{errors.imageUrl}</p>}
               </div>
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">Banner URL</label>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white/70 text-sm font-medium">Banner Image</p>
+                    <p className="text-xs text-white/40">Shown on pack detail headers</p>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-wider text-white/50">
+                    {formData.bannerUrl ? "Linked" : "Required"}
+                  </span>
+                </div>
+                <ImageUploadWithCrop
+                  label="Pack Banner"
+                  description="Wide banner preview"
+                  dropZoneLabel="Drop banner or browse files"
+                  initialPresetId="banner"
+                  uploadButtonLabel="Upload Banner"
+                  onUploadSuccess={handleMediaUploadSuccess("bannerUrl")}
+                  onUploadError={handleMediaUploadError("banner")}
+                  showUploadedPreview
+                />
                 <input
                   name="bannerUrl"
                   value={formData.bannerUrl}
                   onChange={handleChange}
-                  placeholder="https://..."
-                  className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10] transition-colors"
+                  placeholder="Or paste a banner URL"
+                  className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
                 />
+                {errors.bannerUrl && <p className="text-red-400 text-xs mt-1">{errors.bannerUrl}</p>}
               </div>
             </div>
 
-            <button
+            <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/5 border border-white/10 px-4 py-3">
+              <div>
+                <p className="text-white/70 text-sm font-medium">Status</p>
+                <p className="text-xs text-white/40">
+                  {formData.isActive ? "Pack is live" : "Pack is paused"}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={formData.isActive}
+                onClick={toggleActiveState}
+                className={clsx(
+                  "relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#CEFE10] cursor-pointer",
+                  formData.isActive ? "bg-[#CEFE10]/70" : "bg-white/20"
+                )}
+              >
+                <span
+                  className={clsx(
+                    "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
+                    formData.isActive ? "translate-x-6" : "translate-x-1"
+                  )}
+                />
+              </button>
+            </div>
+
+            <GameButton
+              variant="primary"
               type="submit"
-              className="w-full bg-[#CEFE10] text-black font-semibold py-3 rounded-xl shadow-lg shadow-[#CEFE10]/40 hover:bg-[#b8e80d] transition-colors"
+              className="w-full"
             >
               Save Pack
-            </button>
+            </GameButton>
           </form>
         </div>
       </div>

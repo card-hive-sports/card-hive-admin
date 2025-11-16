@@ -31,12 +31,12 @@ interface PackPreviewProps {
   bannerUrl?: string;
 }
 
-const cutSize = 10;
+const cutSize = 20;
 const cutClipPath = `polygon(0 0, 100% 0, 100% calc(100% - ${cutSize}px), calc(100% - ${cutSize}px) 100%, 0 100%, 0 ${cutSize}px)`;
 
 export const PackPreview = ({ packType, sportType, price, bannerUrl }: PackPreviewProps) => {
   return (
-    <div className="relative h-96 w-full overflow-hidden rounded-3xl border border-white/10 bg-black/10 shadow-2xl">
+    <div className="relative min-h-96 h-full w-full overflow-hidden rounded-3xl border border-white/10 bg-black/10 shadow-2xl">
       <div className="absolute inset-0">
         {bannerUrl ? (
           <Image
@@ -61,13 +61,13 @@ export const PackPreview = ({ packType, sportType, price, bannerUrl }: PackPrevi
         </div>
       </div>
 
-      <div className="absolute bottom-4 right-4 h-16 w-16 rounded-[20px] bg-black/70 border border-white/20 shadow-lg" style={{ clipPath: cutClipPath }}>
+      <div className="absolute bottom-4 right-4 h-16 w-16 rounded-[20px] bg-black/70 border border-white/20 shadow-lg overflow-hidden" style={{ clipPath: cutClipPath }}>
         <div className="relative h-full w-full overflow-hidden">
           <Image
             src={sportIcons[sportType]}
             alt={`${sportTypeLabels[sportType]} icon`}
             fill
-            className="object-cover scale-125 translate-x-2 translate-y-2"
+            className="object-cover scale-125 translate-x-4 translate-y-4"
             unoptimized
           />
         </div>

@@ -34,7 +34,7 @@ export const packsAPI = {
   },
 
   updatePack: async (packID: string, data: UpdatePackData): Promise<Pack> => {
-    const response = await apiClient.put<Pack>(`/inventory/packs/${packID}`, data);
+    const response = await apiClient.patch<Pack>(`/inventory/packs/${packID}`, data);
     return response.data;
   },
 

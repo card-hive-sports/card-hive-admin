@@ -73,7 +73,7 @@ export default function PackDetail() {
     };
 
     loadPack();
-  }, [id, packsAPI, showApiError]);
+  }, [id]);
 
   if (isLoading) {
     return (
@@ -125,7 +125,7 @@ export default function PackDetail() {
       <div className="p-4 md:p-8 space-y-6">
         <button
           onClick={() => router.push("/packs")}
-          className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-white/70 hover:text-white transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to Packs
@@ -229,7 +229,7 @@ export default function PackDetail() {
               packType={pack.packType}
               sportType={pack.sportType}
               price={pack.price}
-              bannerUrl={pack.bannerUrl}
+              bannerUrl={pack.imageUrl}
             />
           </div>
         </div>
