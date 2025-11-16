@@ -11,7 +11,6 @@ interface PackModalProps {
 }
 
 const DEFAULT_FORM_DATA: PackFormData = {
-  name: "",
   packType: PACK_TYPE_OPTIONS[0],
   sportType: SPORT_TYPE_OPTIONS[0],
   description: "",
@@ -55,7 +54,6 @@ export const PackModal = ({ isOpen, onClose, onSubmit, initialData, title }: Pac
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "Pack name is required";
     if (!formData.packType) newErrors.packType = "Select a pack type";
     if (!formData.sportType) newErrors.sportType = "Select a sport";
     if (!formData.price.trim() || Number.isNaN(Number(formData.price))) {
@@ -91,22 +89,6 @@ export const PackModal = ({ isOpen, onClose, onSubmit, initialData, title }: Pac
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">
-                Pack Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="e.g., Legends Series"
-                className={`w-full bg-black/30 border rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none transition-colors ${
-                  errors.name ? "border-red-500/50 focus:border-red-500" : "border-white/20 focus:border-[#CEFE10]"
-                }`}
-              />
-              {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-white/70 text-sm font-medium mb-2">

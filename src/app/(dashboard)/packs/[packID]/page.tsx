@@ -86,7 +86,6 @@ const ACTIVITY_LOG: ActivityLogEntry[] = [
 ];
 
 const packToFormData = (pack: Pack): PackFormData => ({
-  name: pack.name ?? "",
   packType: pack.packType,
   sportType: pack.sportType,
   description: pack.description,

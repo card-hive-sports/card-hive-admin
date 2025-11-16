@@ -6,7 +6,6 @@ export const SPORT_TYPE_OPTIONS: SportType[] = ["FOOTBALL", "BASEBALL", "BASKETB
 
 export interface Pack {
   id: string;
-  name?: string;
   packType: PackType;
   sportType: SportType;
   description?: string;
@@ -20,7 +19,6 @@ export interface Pack {
 }
 
 export interface PackFormData {
-  name: string;
   packType: PackType;
   sportType: SportType;
   description?: string;
