@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AxiosError } from "axios";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { PackModal, PackPreview, DeletePackModal } from "@/lib";
+import { PackModal, PackPreview, DeletePackModal, packsAPI } from "@/lib";
 import { ArrowLeft, Plus } from "lucide-react";
 import { GameButton } from "@/lib/ui";
+import { toast } from "sonner";
+import { showApiError } from "@/lib/utils/show-api-error";
 import type { Pack, PackFormData, PackType, SportType } from "@/lib/types/pack";
 
 const packTypeLabels: Record<PackType, string> = {
@@ -28,35 +31,6 @@ const formatCurrency = (value?: string) => {
   return `$${Number(value).toFixed(2)}`;
 };
 
-const PACK_DATA: Record<string, Pack> = {
-  "pack-1": {
-    id: "pack-1",
-    packType: "LEGENDS",
-    sportType: "FOOTBALL",
-    description: "High-end football talent featuring legendary rookies and veterans with premium parallels.",
-    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
-    bannerUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
-    price: "79.99",
-    cards: 32,
-    isActive: true,
-    createdAt: "2024-01-02",
-    updatedAt: "2024-01-15",
-  },
-  "pack-2": {
-    id: "pack-2",
-    packType: "ALL_STARS",
-    sportType: "BASEBALL",
-    description: "A carefully curated mix of baseball greats and rising stars ready for collectors.",
-    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
-    bannerUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
-    price: "59.50",
-    cards: 28,
-    isActive: true,
-    createdAt: "2024-01-10",
-    updatedAt: "2024-02-12",
-  },
-};
-
 const packToFormData = (pack: Pack): PackFormData => ({
   packType: pack.packType,
   sportType: pack.sportType,
@@ -71,11 +45,43 @@ export default function PackDetail() {
   const params = useParams();
   const router = useRouter();
 
-  const id = params.packID as string;
+  const id = params.packID;
 
-  const [pack, setPack] = useState<Pack | null>(PACK_DATA[id] || null);
+  const [pack, setPack] = useState<Pack | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  useEffect(() => {
+    const loadPack = async () => {
+      if (!id) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setPack(null);
+
+      try {
+        const response = await packsAPI.getPackByID(id);
+        setPack(response);
+      } catch (error) {
+        showApiError("fetch pack", error as AxiosError, "Unable to load this pack");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPack();
+  }, [id, packsAPI, showApiError]);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-8 flex items-center justify-center min-h-screen">
+        <p className="text-white">Loading pack...</p>
+      </div>
+    );
+  }
 
   if (!pack) {
     return (
@@ -90,17 +96,28 @@ export default function PackDetail() {
     );
   }
 
-  const handleEditPack = (formData: PackFormData) => {
-    setPack((current) =>
-      current
-        ? { ...current, ...formData, updatedAt: new Date().toISOString().split("T")[0] }
-        : current
-    );
-    setShowEditModal(false);
+  const handleEditPack = async (formData: PackFormData) => {
+    if (!pack) return;
+    try {
+      const updatedPack = await packsAPI.updatePack(pack.id, formData);
+      setPack(updatedPack);
+      toast.success("Pack updated");
+      setShowEditModal(false);
+    } catch (error) {
+      showApiError("update pack", error as AxiosError);
+    }
   };
 
-  const handleDeletePack = () => {
-    router.push("/packs");
+  const handleDeletePack = async () => {
+    if (!pack) return;
+    try {
+      await packsAPI.deletePack(pack.id);
+      toast.success("Pack deleted");
+      setShowDeleteModal(false);
+      router.push("/packs");
+    } catch (error) {
+      showApiError("delete pack", error as AxiosError);
+    }
   };
 
   return (
@@ -229,7 +246,7 @@ export default function PackDetail() {
       {showDeleteModal && (
         <DeletePackModal
           pack={pack}
-          setPack={(_: Pack | null) => {
+          setPack={() => {
             setShowDeleteModal(false);
           }}
           handleDeletePack={handleDeletePack}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X } from "lucide-react";
 import { PACK_TYPE_OPTIONS, SPORT_TYPE_OPTIONS, type PackFormData, type PackType, type SportType } from "@/lib/types/pack";
 
@@ -34,19 +34,23 @@ export const PackModal = ({ isOpen, onClose, onSubmit, initialData, title }: Pac
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
-    } else {
-      setFormData(DEFAULT_FORM_DATA);
     }
   }, [initialData]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type, checked } = e.target;
+    const target = e.target;
+    const { name, value } = target;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        target instanceof HTMLInputElement && target.type === "checkbox"
+          ? target.checked
+          : value,
     }));
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
