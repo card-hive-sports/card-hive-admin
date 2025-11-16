@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { PackType, SportType } from "@/lib/types/pack";
+import { formatCurrency } from "@/lib";
 
 const packTypeLabels: Record<PackType, string> = {
   DRAFT: "Draft",
@@ -30,17 +31,12 @@ interface PackPreviewProps {
   bannerUrl?: string;
 }
 
-const formatCurrency = (value?: string) => {
-  if (!value || Number.isNaN(Number(value))) return "-";
-  return `$${Number(value).toFixed(2)}`;
-};
-
 const cutSize = 10;
 const cutClipPath = `polygon(0 0, 100% 0, 100% calc(100% - ${cutSize}px), calc(100% - ${cutSize}px) 100%, 0 100%, 0 ${cutSize}px)`;
 
 export const PackPreview = ({ packType, sportType, price, bannerUrl }: PackPreviewProps) => {
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded-3xl border border-white/10 bg-black/10 shadow-2xl">
+    <div className="relative h-96 w-full overflow-hidden rounded-3xl border border-white/10 bg-black/10 shadow-2xl">
       <div className="absolute inset-0">
         {bannerUrl ? (
           <Image
@@ -56,12 +52,12 @@ export const PackPreview = ({ packType, sportType, price, bannerUrl }: PackPrevi
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
       </div>
 
-      <div className="relative z-10 flex h-full flex-col justify-between p-4">
+      <div className="absolute bottom-4 left-4 z-10  p-4">
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] uppercase tracking-[0.4em] text-white/70">
             {packTypeLabels[packType]}
           </span>
-          <span className="text-3xl font-bold text-white">{formatCurrency(price)}</span>
+          <span className="text-3xl font-bold text-white">{formatCurrency(Number(price))}</span>
         </div>
       </div>
 

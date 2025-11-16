@@ -183,7 +183,7 @@ const Layout: FC<LayoutProps> = ({ children }) => {
                     <span className="text-base font-bold text-black">{initials}</span>
                   )}
                 </div>
-                <div className="flex flex-col">
+                <div className="hidden sm:flex flex-col">
                   <span className="text-sm font-semibold text-white">
                     {user?.fullName ?? "Admin"}
                   </span>

@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { PackModal, PackPreview, ActivityLog, ActivityLogEntry } from "@/lib";
-import { ArrowLeft, Edit2, Plus, Trash2 } from "lucide-react";
+import { PackModal, PackPreview, DeletePackModal } from "@/lib";
+import { ArrowLeft, Plus } from "lucide-react";
 import { GameButton } from "@/lib/ui";
 import type { Pack, PackFormData, PackType, SportType } from "@/lib/types/pack";
 
@@ -36,7 +35,7 @@ const PACK_DATA: Record<string, Pack> = {
     sportType: "FOOTBALL",
     description: "High-end football talent featuring legendary rookies and veterans with premium parallels.",
     imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
-    bannerUrl: "https://images.unsplash.com/photo-1505842465776-3d8f0d5f4f6a",
+    bannerUrl: "https://images.unsplash.com/photo-1517649763962-0c623066013b",
     price: "79.99",
     cards: 32,
     isActive: true,
@@ -58,33 +57,6 @@ const PACK_DATA: Record<string, Pack> = {
   },
 };
 
-const ACTIVITY_LOG: ActivityLogEntry[] = [
-  {
-    id: "1",
-    type: "publish",
-    title: "Pack Published",
-    description: "Legendary football pack was published to production",
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-    user: "Admin User",
-  },
-  {
-    id: "2",
-    type: "update",
-    title: "Pack Updated",
-    description: "Updated metadata for the pack",
-    timestamp: new Date(Date.now() - 86400000).toISOString(),
-    user: "Admin User",
-  },
-  {
-    id: "3",
-    type: "create",
-    title: "Pack Created",
-    description: "Pack was created in the system",
-    timestamp: new Date(Date.now() - 432000000).toISOString(),
-    user: "Admin User",
-  },
-];
-
 const packToFormData = (pack: Pack): PackFormData => ({
   packType: pack.packType,
   sportType: pack.sportType,
@@ -96,10 +68,12 @@ const packToFormData = (pack: Pack): PackFormData => ({
 });
 
 export default function PackDetail() {
-  const { id } = useParams();
+  const params = useParams();
   const router = useRouter();
 
-  const [pack, setPack] = useState<Pack | null>(PACK_DATA[id as string || "pack-1"] || null);
+  const id = params.packID as string;
+
+  const [pack, setPack] = useState<Pack | null>(PACK_DATA[id] || null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -141,17 +115,16 @@ export default function PackDetail() {
         </button>
 
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div>
+          <div className="">
             <h2 className="text-white text-3xl font-bold mb-2">{packTypeLabels[pack.packType]}</h2>
             <p className="text-white/60">{sportTypeLabels[pack.sportType]}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex min-w-[10vw] gap-2">
             <GameButton
               size="sm"
               className="flex-1 gap-2"
               onClick={() => setShowEditModal(true)}
             >
-              <Edit2 className="w-4 h-4" />
               Edit
             </GameButton>
             <GameButton
@@ -160,7 +133,6 @@ export default function PackDetail() {
               className="flex-1 gap-2"
               onClick={() => setShowDeleteModal(true)}
             >
-              <Trash2 className="w-4 h-4" />
               Delete
             </GameButton>
           </div>
@@ -211,22 +183,6 @@ export default function PackDetail() {
                   <p className="text-white/60 text-xs font-medium mb-1">Last Updated</p>
                   <p className="text-white/80 text-sm">{pack.updatedAt}</p>
                 </div>
-                <div>
-                  <p className="text-white/60 text-xs font-medium mb-1">Cover Image</p>
-                  {pack.imageUrl ? (
-                    <div className="relative h-24 w-full overflow-hidden rounded-xl border border-white/10">
-                      <Image
-                        src={pack.imageUrl}
-                        alt={`${packTypeLabels[pack.packType]} cover`}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-white/50 text-sm">No cover image</p>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -258,7 +214,6 @@ export default function PackDetail() {
               price={pack.price}
               bannerUrl={pack.bannerUrl}
             />
-            <ActivityLog entries={ACTIVITY_LOG} maxHeight="max-h-72" />
           </div>
         </div>
       </div>
@@ -272,40 +227,13 @@ export default function PackDetail() {
       />
 
       {showDeleteModal && (
-        <>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={() => setShowDeleteModal(false)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md mx-4">
-            <div className="glass p-6 rounded-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
-                  <Trash2 className="w-6 h-6 text-red-400" />
-                </div>
-                <h2 className="text-white text-xl font-bold">Delete Pack</h2>
-              </div>
-              <p className="text-white/70 mb-6">
-                Are you sure you want to delete the{" "}
-                <strong>
-                  {packTypeLabels[pack.packType]} · {sportTypeLabels[pack.sportType]}
-                </strong>{" "}
-                pack? This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 bg-black/30 border border-white/20 hover:bg-black/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeletePack}
-                  className="flex-1 bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 text-red-400 font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
+        <DeletePackModal
+          pack={pack}
+          setPack={(_: Pack | null) => {
+            setShowDeleteModal(false);
+          }}
+          handleDeletePack={handleDeletePack}
+        />
       )}
     </>
   );

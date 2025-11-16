@@ -60,9 +60,8 @@ export const renderPackColumns = ({
     align: "right",
     cell: (pack) => (
       <div className="flex items-center justify-end gap-2">
-        <GameButton asChild size="sm" variant="ghost" className="px-3 py-1 normal-case">
+        <GameButton asChild size="sm" variant="secondary" className="px-3 py-1 normal-case">
           <Link href={`/packs/${pack.id}`} className="flex items-center gap-1">
-            <Eye className="w-4 h-4" />
             View
           </Link>
         </GameButton>
@@ -72,7 +71,6 @@ export const renderPackColumns = ({
           className="px-3 py-1 normal-case"
           onClick={() => onEdit(pack)}
         >
-          <Edit2 className="w-4 h-4" />
           Edit
         </GameButton>
         <GameButton
@@ -81,7 +79,6 @@ export const renderPackColumns = ({
           className="px-3 py-1 normal-case"
           onClick={() => onDelete(pack)}
         >
-          <Trash2 className="w-4 h-4" />
           Delete
         </GameButton>
       </div>
@@ -101,26 +98,23 @@ export const renderPackMobileCard = (
     <div className="flex flex-wrap gap-2 w-full">
       <GameButton asChild variant="secondary" size="sm" className="flex-1 normal-case px-3 py-2">
         <Link href={`/packs/${pack.id}`} className="flex items-center justify-center gap-1">
-          <Eye className="w-4 h-4" />
           View
         </Link>
       </GameButton>
       <GameButton
         size="sm"
         variant="secondary"
-        className="flex-1 normal-case"
+        className="normal-case"
         onClick={() => onEdit(pack)}
       >
-        <Edit2 className="w-4 h-4" />
-        Edit
+        &nbsp; Edit &nbsp;
       </GameButton>
       <GameButton
         size="sm"
         variant="danger"
-        className="flex-1 normal-case"
+        className="normal-case"
         onClick={() => onDelete(pack)}
       >
-        <Trash2 className="w-4 h-4" />
         Delete
       </GameButton>
     </div>
@@ -129,7 +123,6 @@ export const renderPackMobileCard = (
   return (
     <DataTableMobileCardLayout
       title={packTypeLabels[pack.packType]}
-      subtitle={sportTypeLabels[pack.sportType]}
       badge={{
         label: statusLabel,
         className: pack.isActive

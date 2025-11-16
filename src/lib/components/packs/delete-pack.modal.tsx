@@ -1,10 +1,10 @@
-import { Dispatch, FC, SetStateAction } from "react";
+import { FC } from "react";
 import { Pack } from "../../types";
 import { Trash2 } from "lucide-react";
 
 interface IProps {
   pack: Pack
-  setPack: Dispatch<SetStateAction<Pack | null>>;
+  setPack: (pack: Pack | null) => void;
   handleDeletePack: (pack: Pack) => void;
 }
 
