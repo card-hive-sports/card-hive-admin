@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   PackModal,
@@ -8,8 +8,11 @@ import {
   DataTableColumn,
   DataTableMobileCardLayout,
   Pagination,
+  ResourceToolbar,
+  ResourceFilterPanel,
+  ResourceSortPanel,
 } from "@/lib";
-import { Search, Plus, Filter, ArrowUpDown, Edit2, Trash2, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { GameButton } from "@/lib/ui";
 import {
   PACK_TYPE_OPTIONS,
@@ -36,6 +39,12 @@ const sportTypeLabels: Record<SportType, string> = {
 };
 
 type PackFilterKey = "packType" | "sportType" | "isActive";
+
+const createInitialFilterState = (): Record<PackFilterKey, string> => ({
+  packType: "",
+  sportType: "",
+  isActive: "",
+});
 
 const formatCurrency = (value?: string) => {
   if (!value || Number.isNaN(Number(value))) return "-";
@@ -120,31 +129,148 @@ export default function Packs() {
   const [showPackModal, setShowPackModal] = useState(false);
   const [editingPack, setEditingPack] = useState<Pack | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<Pack | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [showSort, setShowSort] = useState(false);
   const [sortBy, setSortBy] = useState<"packType" | "createdAt" | "price" | "cards">("packType");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [activeFilters, setActiveFilters] = useState<Record<PackFilterKey, string>>({
-    packType: "",
-    sportType: "",
-    isActive: "",
-  });
+  const [activeFilters, setActiveFilters] = useState<Record<PackFilterKey, string>>(
+    createInitialFilterState()
+  );
   const [page, setPage] = useState(1);
 
-  const handleFilterChange = (key: PackFilterKey, value: string) => {
-    setActiveFilters((prev) => ({ ...prev, [key]: value }));
+  const [filterDraft, setFilterDraft] = useState<Record<PackFilterKey, string>>(
+    createInitialFilterState()
+  );
+  const [sortDraft, setSortDraft] = useState({ sortBy, sortOrder });
+
+  useEffect(() => {
+    setFilterDraft(activeFilters);
+  }, [activeFilters]);
+
+  useEffect(() => {
+    setSortDraft({ sortBy, sortOrder });
+  }, [sortBy, sortOrder]);
+
+  const handleApplyFilters = () => {
+    setActiveFilters(filterDraft);
     setPage(1);
   };
 
-  const handleSortByChange = (value: "packType" | "createdAt" | "price" | "cards") => {
-    setSortBy(value);
+  const handleClearFilters = () => {
+    const resetFilters = createInitialFilterState();
+    setFilterDraft(resetFilters);
+    setActiveFilters(resetFilters);
     setPage(1);
   };
 
-  const handleSortOrderChange = (value: "asc" | "desc") => {
-    setSortOrder(value);
+  const handleApplySort = () => {
+    setSortBy(sortDraft.sortBy);
+    setSortOrder(sortDraft.sortOrder);
     setPage(1);
   };
+
+  const renderFilterPanel = (close: () => void) => (
+    <ResourceFilterPanel
+      sections={[
+        {
+          id: "pack-type-filter",
+          label: "Pack Type",
+          control: (
+            <select
+              value={filterDraft.packType || ""}
+              onChange={(e) =>
+                setFilterDraft((prev) => ({ ...prev, packType: e.target.value }))
+              }
+              className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
+            >
+              <option value="">All Pack Types</option>
+              {PACK_TYPE_OPTIONS.map((type) => (
+                <option key={type} value={type}>
+                  {packTypeLabels[type]}
+                </option>
+              ))}
+            </select>
+          ),
+        },
+        {
+          id: "sport-filter",
+          label: "Sport",
+          control: (
+            <select
+              value={filterDraft.sportType || ""}
+              onChange={(e) =>
+                setFilterDraft((prev) => ({ ...prev, sportType: e.target.value }))
+              }
+              className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
+            >
+              <option value="">All Sports</option>
+              {SPORT_TYPE_OPTIONS.map((sport) => (
+                <option key={sport} value={sport}>
+                  {sportTypeLabels[sport]}
+                </option>
+              ))}
+            </select>
+          ),
+        },
+        {
+          id: "status-filter",
+          label: "Status",
+          control: (
+            <select
+              value={filterDraft.isActive || ""}
+              onChange={(e) =>
+                setFilterDraft((prev) => ({ ...prev, isActive: e.target.value }))
+              }
+              className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
+            >
+              <option value="">All Status</option>
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          ),
+        },
+      ]}
+      primaryAction={{
+        label: "Apply Filters",
+        onClick: () => {
+          handleApplyFilters();
+          close();
+        },
+        variant: "primary",
+        size: "sm",
+      }}
+      onClear={() => {
+        handleClearFilters();
+        close();
+      }}
+    />
+  );
+
+  const renderSortPanel = (close: () => void) => (
+    <ResourceSortPanel
+      sortOptions={[
+        { value: "packType", label: "Pack Type" },
+        { value: "createdAt", label: "Created Date" },
+        { value: "price", label: "Price" },
+        { value: "cards", label: "Card Count" },
+      ]}
+      sortBy={sortDraft.sortBy}
+      sortOrder={sortDraft.sortOrder}
+      onSortByChange={(value) =>
+        setSortDraft((prev) => ({ ...prev, sortBy: value as "packType" | "createdAt" | "price" | "cards" }))
+      }
+      onSortOrderChange={(value) =>
+        setSortDraft((prev) => ({ ...prev, sortOrder: value as "asc" | "desc" }))
+      }
+      primaryAction={{
+        label: "Apply Sort",
+        onClick: () => {
+          handleApplySort();
+          close();
+        },
+        variant: "primary",
+        size: "sm",
+      }}
+    />
+  );
 
   const filteredAndSortedPacks = useMemo(() => {
     let result = [...packs];
@@ -279,26 +405,31 @@ export default function Packs() {
       align: "right",
       cell: (pack) => (
         <div className="flex items-center justify-end gap-2">
-          <GameButton asChild variant="secondary" className="p-2 hover:text-[#CEFE10] normal-case">
+          <GameButton asChild size="sm" variant="ghost" className="px-3 py-1 normal-case">
             <Link href={`/packs/${pack.id}`} className="flex items-center gap-1">
+              <Eye className="w-4 h-4" />
               View
             </Link>
           </GameButton>
           <GameButton
+            size="sm"
             variant="secondary"
-            className="p-2 hover:text-[#CEFE10] normal-case"
+            className="px-3 py-1 normal-case"
             onClick={() => {
               setEditingPack(pack);
               setShowPackModal(true);
             }}
           >
+            <Edit2 className="w-4 h-4" />
             Edit
           </GameButton>
           <GameButton
+            size="sm"
             variant="danger"
-            className="p-2 normal-case"
+            className="px-3 py-1 normal-case"
             onClick={() => setShowDeleteModal(pack)}
           >
+            <Trash2 className="w-4 h-4" />
             Delete
           </GameButton>
         </div>
@@ -315,6 +446,7 @@ export default function Packs() {
       <div className="flex flex-wrap gap-2 w-full">
         <GameButton asChild variant="secondary" size="sm" className="flex-1 normal-case px-3 py-2">
           <Link href={`/packs/${pack.id}`} className="flex items-center justify-center gap-1">
+            <Eye className="w-4 h-4" />
             View
           </Link>
         </GameButton>
@@ -326,13 +458,15 @@ export default function Packs() {
             setShowPackModal(true);
           }}
         >
-          &nbsp; Edit &nbsp;
+          <Edit2 className="w-4 h-4" />
+          Edit
         </GameButton>
         <GameButton
           size="sm"
           variant="danger"
           onClick={() => setShowDeleteModal(pack)}
         >
+          <Trash2 className="w-4 h-4" />
           Delete
         </GameButton>
       </div>
@@ -392,158 +526,22 @@ export default function Packs() {
           </GameButton>
         </div>
 
-        {/* Search and Controls */}
-        <div className="glass p-4 rounded-2xl space-y-4 relative z-0">
-          <div className="flex flex-col md:flex-row gap-3">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-              <input
-                type="text"
-                placeholder="Search packs by type, sport, or price..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full bg-black/30 border border-white/20 rounded-lg pl-10 pr-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-[#CEFE10]"
-              />
-            </div>
-
-            {/* Filter Button */}
-            <div className="relative">
-              <GameButton
-                variant="secondary"
-                onClick={() => setShowFilters(!showFilters)}
-                className="w-full md:w-auto justify-center gap-2"
-              >
-                <Filter className="w-5 h-5" />
-                Filters
-              </GameButton>
-
-              {showFilters && (
-                <div className="absolute top-full right-0 mt-2 w-72 glass rounded-lg p-4 z-50 space-y-4">
-                  <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Pack Type</label>
-                    <select
-                      value={activeFilters.packType || ""}
-                      onChange={(e) => handleFilterChange("packType", e.target.value)}
-                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
-                    >
-                      <option value="">All Pack Types</option>
-                      {PACK_TYPE_OPTIONS.map((type) => (
-                        <option key={type} value={type}>
-                          {packTypeLabels[type]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Sport</label>
-                    <select
-                      value={activeFilters.sportType || ""}
-                      onChange={(e) => handleFilterChange("sportType", e.target.value)}
-                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
-                    >
-                      <option value="">All Sports</option>
-                      {SPORT_TYPE_OPTIONS.map((sport) => (
-                        <option key={sport} value={sport}>
-                          {sportTypeLabels[sport]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Status</label>
-                    <select
-                      value={activeFilters.isActive || ""}
-                      onChange={(e) => handleFilterChange("isActive", e.target.value)}
-                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
-                    >
-                      <option value="">All Status</option>
-                      <option value="true">Active</option>
-                      <option value="false">Inactive</option>
-                    </select>
-                  </div>
-
-                  <div className="border-t border-white/10 pt-4">
-                    <GameButton
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-center text-xs"
-                      onClick={() => {
-                        setActiveFilters({
-                          packType: "",
-                          sportType: "",
-                          isActive: "",
-                        });
-                        setPage(1);
-                      }}
-                    >
-                      Clear Filters
-                    </GameButton>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sort Button */}
-            <div className="relative">
-              <GameButton
-                variant="secondary"
-                onClick={() => setShowSort(!showSort)}
-                className="w-full md:w-auto justify-center gap-2"
-              >
-                <ArrowUpDown className="w-5 h-5" />
-                Sort
-              </GameButton>
-
-              {showSort && (
-                <div className="absolute top-full right-0 mt-2 w-48 glass rounded-lg p-4 z-50 space-y-3">
-                  <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Sort By</label>
-                    <select
-                      value={sortBy}
-                      onChange={(e) =>
-                        handleSortByChange(e.target.value as "packType" | "createdAt" | "price" | "cards")
-                      }
-                      className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10]"
-                    >
-                      <option value="packType">Pack Type</option>
-                      <option value="createdAt">Created Date</option>
-                      <option value="price">Price</option>
-                      <option value="cards">Card Count</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-white/70 text-sm font-medium mb-2">Order</label>
-                    <div className="flex gap-2">
-                      <GameButton
-                        size="sm"
-                        variant={sortOrder === "asc" ? "primary" : "ghost"}
-                        className="flex-1"
-                        onClick={() => handleSortOrderChange("asc")}
-                      >
-                        Asc
-                      </GameButton>
-                      <GameButton
-                        size="sm"
-                        variant={sortOrder === "desc" ? "primary" : "ghost"}
-                        className="flex-1"
-                        onClick={() => handleSortOrderChange("desc")}
-                      >
-                        Desc
-                      </GameButton>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <ResourceToolbar
+          searchValue={search}
+          onSearchChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          searchPlaceholder="Search packs by type, sport, or price..."
+          filters={{
+            buttonLabel: "Filters",
+            renderContent: renderFilterPanel,
+          }}
+          sort={{
+            buttonLabel: "Sort",
+            renderContent: renderSortPanel,
+          }}
+        />
 
         <DataTable<Pack>
           data={paginatedPacks}

@@ -1,66 +1,51 @@
 'use client'
 
 import {useState, useEffect, useCallback} from "react";
-import { Plus, AlertCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   UserFormData,
   UserModal,
   GetUsersParams,
   usersAPI,
-  formatCurrency,
   useDebouncedValue,
   User,
-  UserRole,
   COMPUTED_STATUS,
   USERS_SORT_OPTIONS,
   SORT_ORDER,
   Pagination,
   PageHeader,
   ResourceToolbar,
+  UsersFilterPanel,
+  ActiveUsersFilterState,
   DataTable,
-  DataTableColumn,
-  DataTableMobileCardLayout,
   GameButton,
+  UsersSortPanel,
+  renderUserColumns,
+  renderUserMobileCard,
+  PaginationState,
 } from "@/lib";
-import Link from "next/link";
 import { toast } from "sonner";
 import { showApiError } from "@/lib/utils/show-api-error";
 import { AxiosError } from "axios";
-import { useRouter } from "next/navigation";
+import { DeleteUserModal } from "@/lib/components/users/delete-user.modal";
 
-type ActiveFiltersState = {
-  status: string;
-  startDate: string;
-  endDate: string;
-};
 
-type PaginationState = {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-};
-
-const initialFiltersState = (): ActiveFiltersState => ({
+const initialFiltersState = (): ActiveUsersFilterState => ({
   status: "",
   startDate: "",
   endDate: "",
 });
 
 export default function Users() {
-  const router = useRouter();
-
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 400);
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [sortBy, setSortBy] = useState<USERS_SORT_OPTIONS>(USERS_SORT_OPTIONS.CREATED_AT);
   const [sortOrder, setSortOrder] = useState<SORT_ORDER>(SORT_ORDER.DESC);
-  const [activeFilters, setActiveFilters] = useState<ActiveFiltersState>(() => initialFiltersState());
-  const [filterDraft, setFilterDraft] = useState<ActiveFiltersState>(() => initialFiltersState());
+  const [activeFilters, setActiveFilters] = useState<ActiveUsersFilterState>(() => initialFiltersState());
+  const [filterDraft, setFilterDraft] = useState<ActiveUsersFilterState>(() => initialFiltersState());
   const [sortDraft, setSortDraft] = useState<{ sortBy: USERS_SORT_OPTIONS; sortOrder: SORT_ORDER }>({
     sortBy: USERS_SORT_OPTIONS.CREATED_AT,
     sortOrder: SORT_ORDER.DESC,
@@ -157,20 +142,6 @@ export default function Users() {
     setSortDraft({ sortBy, sortOrder });
   }, [sortBy, sortOrder]);
 
-  const computeStatus = (u: User) => {
-    if (u.isDeleted) return "inactive";
-    if (!u.isActive) return "suspended";
-    return "active";
-  };
-
-  const getStatusColor = (status: string) => {
-    if (status === "active") return "bg-green-500/20 text-green-400";
-    if (status === "suspended") return "bg-yellow-500/20 text-yellow-400";
-    return "bg-gray-500/20 text-gray-400";
-  };
-
-  const isSuperAdmin = (user: User) => user.role === UserRole.SUPER_ADMIN;
-
   const handleCreateUser = async (formData: UserFormData) => {
     try {
       await usersAPI.createUser({
@@ -210,7 +181,7 @@ export default function Users() {
     try {
       await usersAPI.deleteUser(user.id, isPurge);
       await fetchUsers(search);
-      setShowDeleteModal(null);
+      setUser(null);
       toast.success(isPurge ? "User permanently deleted" : "User moved to trash");
     } catch (error) {
       showApiError(isPurge ? 'permanently delete user' : 'delete user', error as AxiosError);
@@ -221,7 +192,7 @@ export default function Users() {
     try {
       await usersAPI.unarchiveUser(user.id);
       await fetchUsers(search);
-      setShowDeleteModal(null);
+      setUser(null);
       toast.success("User restored successfully");
     } catch (error) {
       showApiError('restore user', error as AxiosError);
@@ -243,319 +214,9 @@ export default function Users() {
     }
   };
 
-  const userColumns: DataTableColumn<User>[] = [
-    {
-      id: "name",
-      header: "Name",
-      cell: (user) => <span className="text-white font-semibold">{user.fullName}</span>,
-    },
-    {
-      id: "email",
-      header: "Email",
-      cell: (user) => <span className="text-white/70 text-sm">{user.email ?? "-"}</span>,
-    },
-    {
-      id: "wallet",
-      header: "Wallet",
-      cell: (user) => <span className="text-white font-semibold">{formatCurrency(Number(user.walletBalance))}</span>,
-    },
-    {
-      id: "cards",
-      header: "Cards",
-      cell: (user) => <span className="text-white text-sm">{user.cardsOwned}</span>,
-    },
-    {
-      id: "status",
-      header: "Status",
-      cell: (user) => {
-        const status = computeStatus(user);
-        return (
-          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </span>
-        );
-      },
-    },
-    {
-      id: "role",
-      header: "Role",
-      cell: (user) => <span className="text-white/70 text-sm">{user.role}</span>,
-    },
-    {
-      id: "joined",
-      header: "Joined",
-      cell: (user) => (
-        <span className="text-white/70 text-sm">
-          {new Date(user.createdAt).toISOString().split("T")[0]}
-        </span>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      align: "right",
-      cell: (user) => {
-        const superAdmin = isSuperAdmin(user);
-        const disabledClasses = superAdmin ? "opacity-40 cursor-not-allowed pointer-events-none" : "cursor-pointer";
-
-        return (
-          <div className="flex items-center justify-end gap-2">
-            <GameButton
-              variant="secondary"
-              onClick={() => {
-                router.push(`/users/${user.id}`);
-              }}
-              className="p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors"
-              title="View"
-            >
-              VIEW
-            </GameButton>
-            <GameButton
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                if (superAdmin) return;
-                setEditingUser(user);
-                setShowUserModal(true);
-              }}
-              disabled={superAdmin}
-              className={`p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
-              title={superAdmin ? "Action disabled for Super Admin" : "Edit"}
-            >
-              EDIT
-            </GameButton>
-            <GameButton
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                if (superAdmin) return;
-                handleSuspendUser(user);
-              }}
-              disabled={superAdmin}
-              className={`p-2 text-white/70 hover:text-[#CEFE10] hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
-              title={
-                superAdmin
-                  ? "Action disabled for Super Admin"
-                  : user.isActive
-                  ? "Suspend"
-                  : "Unsuspend"
-              }
-            >
-              {user.isActive
-                  ? "Suspend"
-                  : "Unsuspend"}
-            </GameButton>
-            <GameButton
-              type="button"
-              variant="danger"
-              onClick={() => {
-                if (superAdmin) return;
-                setShowDeleteModal(user);
-              }}
-              disabled={superAdmin}
-              className={`p-2 text-white/70 hover:bg-white/10 rounded-lg transition-colors ${disabledClasses}`}
-              title={superAdmin ? "Action disabled for Super Admin" : "Delete"}
-            >
-              DELETE
-            </GameButton>
-          </div>
-        );
-      },
-      headerClassName: "text-right",
-      cellClassName: "text-right",
-    },
-  ];
-
-  const renderUserMobileCard = (user: User) => {
-    const status = computeStatus(user);
-    const superAdmin = isSuperAdmin(user);
-    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-
-    const actionButtons = (
-      <div className="flex flex-wrap gap-2 w-full">
-        <GameButton asChild variant="secondary" size="sm" className="flex-1 normal-case px-3 py-2">
-          <Link href={`/users/${user.id}`} className="w-full text-center">
-            View
-          </Link>
-        </GameButton>
-        <GameButton
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={superAdmin}
-          onClick={() => {
-            if (superAdmin) return;
-            setEditingUser(user);
-            setShowUserModal(true);
-          }}
-        >
-         &nbsp; Edit &nbsp;
-        </GameButton>
-        <GameButton
-          size="sm"
-          variant="danger"
-          disabled={superAdmin}
-          onClick={() => {
-            if (superAdmin) return;
-            setShowDeleteModal(user);
-          }}
-        >
-          Delete
-        </GameButton>
-      </div>
-    );
-
-    return (
-      <DataTableMobileCardLayout
-        title={user.fullName}
-        subtitle={user.email ?? "-"}
-        badge={{ label: statusLabel, className: getStatusColor(status) }}
-        fields={[
-          {
-            id: `wallet-${user.id}`,
-            label: "Wallet",
-            value: formatCurrency(Number(user.walletBalance)),
-          },
-          {
-            id: `cards-${user.id}`,
-            label: "Cards",
-            value: user.cardsOwned,
-          },
-          {
-            id: `status-field-${user.id}`,
-            label: "Status",
-            value: (
-              <span
-                className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}
-              >
-                {statusLabel}
-              </span>
-            ),
-            span: 2,
-          },
-        ]}
-        actions={actionButtons}
-      />
-    );
-  };
-
-  const renderFilterPanel = (close: () => void) => (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-white/70 text-sm font-medium mb-2">Status</label>
-        <select
-          value={filterDraft.status}
-          onChange={(e) => setFilterDraft((prev) => ({ ...prev, status: e.target.value }))}
-          className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
-        >
-          <option value="">All</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
-      <div>
-        <label className="block text-white/70 text-sm font-medium mb-2">Date range</label>
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="date"
-            value={filterDraft.startDate}
-            onChange={(e) => setFilterDraft((prev) => ({ ...prev, startDate: e.target.value }))}
-            className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
-          />
-          <input
-            type="date"
-            value={filterDraft.endDate}
-            onChange={(e) => setFilterDraft((prev) => ({ ...prev, endDate: e.target.value }))}
-            className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
-          />
-        </div>
-        <p className="text-white/40 text-xs mt-2">Filter by created date.</p>
-      </div>
-      <GameButton
-        size="sm"
-        className="w-full"
-        onClick={() => {
-          handleApplyFilters();
-          close();
-        }}
-      >
-        Apply Filters
-      </GameButton>
-    </div>
-  );
-
-  const renderSortPanel = (close: () => void) => (
-    <div className="space-y-3">
-      <div>
-        <label className="block text-white/70 text-sm font-medium mb-2">Sort By</label>
-        <select
-          value={sortDraft.sortBy}
-          onChange={(e) =>
-            setSortDraft((prev) => ({
-              ...prev,
-              sortBy: e.target.value as USERS_SORT_OPTIONS,
-            }))
-          }
-          className="w-full bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#CEFE10] cursor-pointer"
-        >
-          <option value={USERS_SORT_OPTIONS.CREATED_AT}>Joined Date</option>
-          <option value={USERS_SORT_OPTIONS.FULL_NAME}>Full Name</option>
-          <option value={USERS_SORT_OPTIONS.WALLET_BALANCE}>Wallet Balance</option>
-          <option value={USERS_SORT_OPTIONS.EMAIL}>Email</option>
-          <option value={USERS_SORT_OPTIONS.PHONE}>Phone</option>
-        </select>
-      </div>
-      <div>
-        <label className="block text-white/70 text-sm font-medium mb-2">Order</label>
-        <div className="flex gap-2">
-          <GameButton
-            type="button"
-            size="sm"
-            variant={sortDraft.sortOrder === SORT_ORDER.ASC ? "primary" : "secondary"}
-            className="flex-1"
-            onClick={() =>
-              setSortDraft((prev) => ({
-                ...prev,
-                sortOrder: SORT_ORDER.ASC,
-              }))
-            }
-          >
-            Asc
-          </GameButton>
-          <GameButton
-            type="button"
-            size="sm"
-            variant={sortDraft.sortOrder === SORT_ORDER.DESC ? "primary" : "secondary"}
-            className="flex-1"
-            onClick={() =>
-              setSortDraft((prev) => ({
-                ...prev,
-                sortOrder: SORT_ORDER.DESC,
-              }))
-            }
-          >
-            Desc
-          </GameButton>
-        </div>
-      </div>
-      <GameButton
-        size="sm"
-        className="w-full"
-        onClick={() => {
-          handleApplySort();
-          close();
-        }}
-      >
-        Apply Sort
-      </GameButton>
-    </div>
-  );
-
   return (
     <>
       <div className="p-4 md:p-8 space-y-6">
-        {/* Header */}
         <PageHeader
           title="Users"
           subtitle="Manage platform users and their accounts"
@@ -574,26 +235,53 @@ export default function Users() {
           }
         />
 
-        {/* Search and Controls */}
         <ResourceToolbar
           searchValue={search}
           onSearchChange={handleSearchChange}
           searchPlaceholder="Search users by name, email or phone..."
           filters={{
             buttonLabel: "Filters",
-            renderContent: renderFilterPanel,
+            renderContent: (close: () => void) => {
+              return (
+                <UsersFilterPanel
+                  close={close}
+                  filterDraft={filterDraft}
+                  setFilterDraft={setFilterDraft}
+                  handleApplyFilters={handleApplyFilters}
+                />
+              );
+            },
           }}
           sort={{
             buttonLabel: "Sort",
-            renderContent: renderSortPanel,
+            renderContent: (close: () => void) => {
+              return (
+                <UsersSortPanel
+                  close={close}
+                  sortDraft={sortDraft}
+                  setSortDraft={setSortDraft}
+                  handleApplySort={handleApplySort}
+                />
+              );
+            },
           }}
         />
 
         <DataTable<User>
           data={users}
-          columns={userColumns}
+          columns={renderUserColumns({
+            setUser,
+            setShowUserModal,
+            setEditingUser,
+            handleSuspendUser,
+          })}
           keyExtractor={(user) => user.id}
-          renderMobileCard={(user) => renderUserMobileCard(user)}
+          renderMobileCard={(user) => renderUserMobileCard(user, {
+            setUser,
+            setShowUserModal,
+            setEditingUser,
+            handleSuspendUser,
+          })}
         />
 
         <Pagination
@@ -607,7 +295,6 @@ export default function Users() {
         />
       </div>
 
-      {/* Modals */}
       <UserModal
         key={editingUser ? `edit-${editingUser.id}` : "create"}
         isOpen={showUserModal}
@@ -620,60 +307,13 @@ export default function Users() {
         title={editingUser ? "Edit User" : "Create New User"}
       />
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={() => setShowDeleteModal(null)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md mx-4">
-            <div className="glass p-6 rounded-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6 text-red-400" />
-                </div>
-                <h2 className="text-white text-xl font-bold">Delete User</h2>
-              </div>
-
-              <p className="text-white/70 mb-6">
-                How would you like to delete <strong>{showDeleteModal.fullName}</strong>?
-              </p>
-
-              <div className="space-y-3 mb-6">
-                {!showDeleteModal.isDeleted ? (
-                  <button
-                    onClick={() => handleDeleteUser(showDeleteModal, false)}
-                    className="w-full text-left p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/30 transition-colors cursor-pointer"
-                  >
-                    <p className="text-yellow-400 font-semibold">Soft Delete (Archive)</p>
-                    <p className="text-yellow-400/70 text-sm">User will be marked as inactive but data remains</p>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleUnarchiveUser(showDeleteModal)}
-                    className="w-full text-left p-4 bg-green-500/20 border border-green-500/30 rounded-lg hover:bg-green-500/30 transition-colors cursor-pointer"
-                  >
-                    <p className="text-green-400 font-semibold">Unarchive User</p>
-                    <p className="text-green-400/70 text-sm">Restore access for this archived user</p>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => handleDeleteUser(showDeleteModal, true)}
-                  className="w-full text-left p-4 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors cursor-pointer"
-                >
-                  <p className="text-red-400 font-semibold">Purge (Permanent Delete)</p>
-                  <p className="text-red-400/70 text-sm">User and all data will be permanently removed</p>
-                </button>
-              </div>
-
-              <button
-                onClick={() => setShowDeleteModal(null)}
-                className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </>
+      {user && (
+        <DeleteUserModal
+          user={user}
+          setUser={setUser}
+          handleDeleteUser={handleDeleteUser}
+          handleUnarchiveUser={handleUnarchiveUser}
+        />
       )}
     </>
   );
